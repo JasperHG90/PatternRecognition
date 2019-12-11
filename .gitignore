@@ -37,3 +37,6 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# Wikipedia data (unzipped)
+data/WikiEssentials_L4.txt
