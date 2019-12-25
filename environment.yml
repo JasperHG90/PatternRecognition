@@ -1,0 +1,14 @@
+name: VitalWikiClassifier
+dependencies:
+  - numpy
+  - pandas
+  - spacy=2.0.12
+  - nltk
+  - keras-gpu
+  - tensorflow-gpu
+  - pytorch
+  - cudatoolkit=10.1
+  - matplotlib
+  - scipy
+  - ipykernel
+  - scikit-learn
