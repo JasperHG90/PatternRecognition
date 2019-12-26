@@ -28,5 +28,11 @@ conda activate VitalWikiClassifier
 pip install -r requirements.txt
 ```
 
-5. Check the `.Rprofile` file to ensure that R knows where to find your anaconda distribution.
+5. In R, install the `reticulate` library:
+
+```r
+install.packages("reticulate")
+```
+
+6. Check the `.Rprofile` file to ensure that R knows where to find your anaconda distribution.
 
