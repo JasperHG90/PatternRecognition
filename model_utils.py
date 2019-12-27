@@ -3,7 +3,6 @@
 from keras.models import load_model
 from keras.optimizers import Adam
 from keras import preprocessing
-import keras_metrics
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
@@ -167,7 +166,7 @@ def split(dataset, val_prop = .1, seed = None):
     return(WikiData(X_train, y_train), WikiData(X_val, y_val))
 
 # To record training/testing accuracy & loss  
-def make_train_state(args):
+def make_train_state():
     return {'epoch_index': 0,
           'train_loss': [],
           'train_acc': [],
@@ -175,3 +174,63 @@ def make_train_state(args):
           'val_acc': [],
           'test_loss': -1,
           'test_acc': -1}
+
+# Training loop
+import typing
+def train_model(model: nn.Module, train_data: torch.utils.data.Dataset, optimizer: torch.optim, epochs: int, val_prop = 0.1, batch_size = 128, shuffle = True, device = "cpu") -> dict:
+  """Setup"""
+  # Dictionary to store results
+  train_state = make_train_state()
+  # Epochs
+  for epoch_idx in range(epochs):
+    # Split train / test
+    trn, tst = split(train_data, val_prop=0.1)
+    # Create training batches
+    batches = batcher(trn, batch_size = batch_size, shuffle = shuffle, device = device)
+    # Keep track of loss
+    loss = 0.0
+    acc = 0.0
+    # Training mode
+    model.train()
+    # For each batch ...
+    for batch_idx, batch_data in enumerate(batches):
+      # Training loop
+      # --------------------
+      # Zero gradients
+      optimizer.zero_grad()
+      # Compute output
+      probs = model(batch_data["X"].type(torch.long))
+      # Classes
+      valt, y = batch_data["y"].type(torch.long).max(dim=1)
+      # Compute loss
+      loss_batch = loss_function(probs, y)
+      loss += (loss_batch.item() - loss) / (batch_idx + 1)
+      # Compute gradients
+      loss_batch.backward()
+      # Gradient descent
+      optimizer.step()
+      #--------------------
+      # End training loop
+      # Compute accuracy
+      val, yhat = probs.max(dim=1)
+      acc_batch = np.int((yhat == y).sum()) / yhat.size()[0]
+      acc += (acc_batch - acc) / (batch_idx + 1)
+    # Add loss/acc
+    train_state["train_loss"].append(np.round(loss, 4))
+    train_state["train_acc"].append(np.round(acc, 4))
+    # Predict on validation set
+    model.eval()
+    # Predict
+    y_pred = model(torch.tensor(tst.X).type(torch.long))
+    # Retrieve true y
+    val, y_true = torch.tensor(tst.y).type(torch.long).max(dim=1)
+    # Loss
+    loss_val = loss_function(y_pred, y_true)
+    # Accuracy
+    _, y_pred = y_pred.max(dim=1)
+    acc_val = np.int((y_pred == y_true).sum()) / y_pred.size()[0]
+    # Add
+    train_state["val_loss"].append(np.round(loss_val.item(), 4))
+    train_state["val_acc"].append(np.round(acc_val, 4))
+  # Return
+  return((model, train_state))

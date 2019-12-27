@@ -12,13 +12,17 @@ import os
 from keras.preprocessing.text import Tokenizer # Use keras for tokenization & preprocessing
 from keras import preprocessing
 import matplotlib.pyplot as plt
-from model_utils import load_FT, Embedding_FastText, WikiData, split, batcher, make_train_state
+from model_utils import load_FT, Embedding_FastText, WikiData, split, batcher, train_model
 
 # Details for this script
 from argparse import Namespace
 
 # Model settings
 args = Namespace(
+  # File to save results
+  out_file = 'results/basicNN_trials.csv',
+  # Number of times to evaluate bayesian search for hyperparams
+  max_evals = 200,
   # Size of the vocabulary
   input_vocabulary_size = 15000,
   # Embedding size
@@ -92,7 +96,7 @@ train = preprocessing.sequence.pad_sequences(x_train, maxlen=args.seq_max_len)
 
 # Get tokens to be looked up in FT embedding
 WI = {k:v for k,v in tokenizer.word_index.items() if v <= (args.input_vocabulary_size - 1)}
-FTEMB = load_FT("models/wiki-news-300d-1M.vec", WI, args.embedding_dim, args.input_vocabulary_size)
+FTEMB = load_FT("embeddings/wiki-news-300d-1M.vec", WI, args.embedding_dim, args.input_vocabulary_size)
 # Check which are 0
 io = np.sum(FTEMB, axis=1)
 zerovar = np.where(io == 0)[0]
@@ -102,9 +106,10 @@ zerovar_words
 
 # Set up a softmax layer
 # One-layer NN with softmax on top
-class Multinomial(nn.Module):
-    def __init__(self, weights, num_classes, hidden_dim):
-        super(Multinomial, self).__init__()
+class BaselineNN(nn.Module):
+    def __init__(self, weights, num_classes, hidden_dim, p_dropout = 0):
+        super(BaselineNN, self).__init__()
+        self._p_dropout = p_dropout
         # Get embedding dimensions
         self.weights_dim = weights.shape[1]
         # Set up embedding
@@ -113,13 +118,13 @@ class Multinomial(nn.Module):
         self.linear1 = nn.Linear(self.weights_dim, hidden_dim)
         # Set up softmax layer
         self.linear2 = nn.Linear(hidden_dim, num_classes)
-    def forward(self, input):
+    def forward(self, input, dropout = 0):
         # Call embedding
         embedded = self.embedding(input).sum(dim=1)
         # Predict
         yhat = F.relu(self.linear1(embedded))
         # Dropout
-        #yhat = F.dropout(yhat, p = 0.3)
+        yhat = F.dropout(yhat, p = self._p_dropout)
         # Linear
         yhat = self.linear2(yhat)
         # Probabilities (logged)
@@ -139,62 +144,64 @@ trainx, test = split(VitalArticles, val_prop = .05)
 cw = torch.tensor(np.max(np.sum(train_y_ohe, axis=0)) / (np.sum(train_y_ohe, axis=0))).type(torch.float).to(device)
 # Set up the classifier
 # Hidden dim neurons: 128
-mlr = Multinomial(FTEMB, train_y_ohe.shape[1], 128)
-mlr = mlr.to(device)  
-loss_function = nn.CrossEntropyLoss(weight=cw)  
+#mlr = BaselineNN(FTEMB, train_y_ohe.shape[1], 128)
+#mlr = mlr.to(device)  
+#loss_function = nn.CrossEntropyLoss(weight=cw)  
 # Optimizer
-optimizer = optim.Adam(mlr.parameters(), lr=args.learning_rate)
-# Dictionary to store results
-train_state = make_train_state(args)
-  
-# Epochs
-for epoch_idx in range(args.epochs):
-  # Split train / test
-  trn, tst = split(trainx, val_prop=0.1)
-  # Create training batches
-  batches = batcher(trn, batch_size = args.batch_size, shuffle = True, device = "cpu")
-  # Keep track of loss
-  loss = 0.0
-  acc = 0.0
-  # Training mode
-  mlr.train()
-  # For each batch ...
-  for batch_idx, batch_data in enumerate(batches):
-    # Training loop
-    # --------------------
-    # Zero gradients
-    optimizer.zero_grad()
-    # Compute output
-    probs = mlr(batch_data["X"].type(torch.long))
-    # Classes
-    valt, y = batch_data["y"].type(torch.long).max(axis=1)
-    # Compute loss
-    loss_batch = loss_function(probs, y)
-    loss += (loss_batch.item() - loss) / (batch_idx + 1)
-    # Compute gradients
-    loss_batch.backward()
-    # Gradient descent
-    optimizer.step()
-    #--------------------
-    # End training loop
-    # Compute accuracy
-    val, yhat = probs.max(axis=1)
-    acc_batch = np.int((yhat == y).sum()) / yhat.size()[0]
-    acc += (acc_batch - acc) / (batch_idx + 1)
-  # Add loss/acc
-  train_state["train_loss"].append(np.round(loss, 4))
-  train_state["train_acc"].append(np.round(acc, 4))
-  # Predict on validation set
-  mlr.eval()
-  # Predict
-  y_pred = mlr(torch.tensor(tst.X).type(torch.long))
-  # Retrieve true y
-  val, y_true = torch.tensor(tst.y).type(torch.long).max(axis=1)
-  # Loss
-  loss_val = loss_function(y_pred, y_true)
-  # Accuracy
-  _, y_pred = y_pred.max(axis=1)
-  acc_val = np.int((y_pred == y_true).sum()) / y_pred.size()[0]
-  # Add
-  train_state["val_loss"].append(np.round(loss_val.item(), 4))
-  train_state["val_acc"].append(np.round(acc_val, 4))
+#optimizer = optim.Adam(mlr.parameters(), lr=args.learning_rate)
+
+### Use hyperopt (Bayesian hyperparameter optimization) to search for good hyperparams
+from hyperopt import STATUS_OK
+import csv
+from hyperopt import hp
+# Optimizer
+from hyperopt import tpe
+# Save basic training information
+from hyperopt import Trials
+# Optimizer criterion
+from hyperopt import fmin
+
+# Function that sets up model and outputs and returns validation loss
+def baselineNN_search(parameters):
+  """Set up, run and evaluate a baseline neural network"""
+  mlr = BaselineNN(FTEMB, train_y_ohe.shape[1], parameters["hidden_units"], p_dropout = parameters["dropout"])
+  # To device
+  mlr = mlr.to(device)  
+  loss_function = nn.CrossEntropyLoss(weight=cw)  
+  # Optimizer
+  optimizer = optim.Adam(mlr.parameters(), lr=parameters["learning_rate"])
+  # Train using CV
+  _, io = train_model(mlr, trainx, optimizer, 25, 0.1, 128)
+  # Write
+  is_min = np.argmin(io["val_loss"])
+  with open(args.out_file, 'a') as of_connection:
+    writer = csv.writer(of_connection)
+    writer.writerow([io["val_loss"][is_min], parameters, is_min, io["val_acc"][is_min]])
+  # Return cross-validation loss
+  return({"loss": np.min(io["val_loss"]), "parameters": parameters, 'status':STATUS_OK})
+
+# Test if works  
+parameters = {"learning_rate": 0.001, "hidden_units": 128, "dropout": 0}
+po = baselineNN_search(parameters)
+
+# Define the search space
+space = {
+    'hidden_units': hp.choice('hidden_units', [32,64,128,256]),
+    'dropout': hp.uniform("dropout", 0, 0.5),
+    'learning_rate': hp.loguniform('learning_rate', np.log(0.0001), np.log(0.01))
+}
+
+# Algorithm
+tpe_algorithm = tpe.suggest
+
+# Trials object to track progress
+bayes_trials = Trials()
+# File to save first results
+with open(args.out_file, 'w') as of_connection:
+  writer = csv.writer(of_connection)
+  # Write the headers to the file
+  writer.writerow(['loss', 'params', 'iteration', 'accuracy'])
+
+# Optimize
+best = fmin(fn = baselineNN_search, space = space, algo = tpe.suggest, 
+            max_evals = args.max_evals, trials = bayes_trials)
