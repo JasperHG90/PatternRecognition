@@ -1,5 +1,0 @@
-contractions
-textsearch
-daiquiri
-hyperopt
-test_tube

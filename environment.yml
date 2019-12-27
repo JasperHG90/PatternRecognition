@@ -1,14 +1,21 @@
 name: VitalWikiClassifier
 dependencies:
+  - python=3.6
+  - pip
   - numpy
   - pandas
   - spacy=2.0.12
   - nltk
   - keras-gpu
   - tensorflow-gpu
-  - pytorch
-  - cudatoolkit=10.1
+  - pytorch-gpu
+  - cudatoolkit
   - matplotlib
   - scipy
-  - ipykernel
   - scikit-learn
+  - pip:
+    - contractions
+    - textsearch
+    - daiquiri
+    - hyperopt
+    - scorch

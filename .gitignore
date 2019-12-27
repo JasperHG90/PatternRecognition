@@ -44,3 +44,7 @@ data/WikiEssentials_L4.txt
 # Ignore embeddings
 embeddings/*.vec
 embeddings/*.vec.zip
+
+# Ignore pycache
+__pycache__
+*.pyc
