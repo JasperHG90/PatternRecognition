@@ -177,7 +177,8 @@ def make_train_state():
 
 # Training loop
 import typing
-def train_model(model: nn.Module, train_data: torch.utils.data.Dataset, optimizer: torch.optim, epochs: int, val_prop = 0.1, batch_size = 128, shuffle = True, device = "cpu") -> dict:
+def train_model(model: nn.Module, train_data: torch.utils.data.Dataset, optimizer: torch.optim, loss_function: nn.CrossEntropyLoss, epochs: int, 
+                val_prop = 0.1, batch_size = 128, shuffle = True, device = "cpu") -> dict:
   """Setup"""
   # Dictionary to store results
   train_state = make_train_state()
@@ -221,9 +222,9 @@ def train_model(model: nn.Module, train_data: torch.utils.data.Dataset, optimize
     # Predict on validation set
     model.eval()
     # Predict
-    y_pred = model(torch.tensor(tst.X).type(torch.long))
+    y_pred = model(torch.tensor(tst.X).type(torch.long).to(device))
     # Retrieve true y
-    val, y_true = torch.tensor(tst.y).type(torch.long).max(dim=1)
+    val, y_true = torch.tensor(tst.y).type(torch.long).to(device).max(dim=1)
     # Loss
     loss_val = loss_function(y_pred, y_true)
     # Accuracy

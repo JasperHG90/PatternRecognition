@@ -22,7 +22,7 @@ args = Namespace(
   # File to save results
   out_file = 'results/basicNN_trials.csv',
   # Number of times to evaluate bayesian search for hyperparams
-  max_evals = 200,
+  max_evals = 800,
   # Size of the vocabulary
   input_vocabulary_size = 15000,
   # Embedding size
@@ -103,6 +103,13 @@ zerovar = np.where(io == 0)[0]
 # Get words
 zerovar_words = {k:v for k,v in WI.items() if v in zerovar}
 zerovar_words
+# Save embeddings
+with open("embeddings/prep.pickle", 'wb') as handle:
+  pickle.dump(FTEMB,  handle, protocol=pickle.HIGHEST_PROTOCOL)
+  
+#%% Load pre-processed embeddings
+with open("embeddings/prep.pickle", "rb") as inFile:
+    FTEMB = pickle.load(inFile)
 
 # Set up a softmax layer
 # One-layer NN with softmax on top
@@ -169,24 +176,28 @@ def baselineNN_search(parameters):
   mlr = mlr.to(device)  
   loss_function = nn.CrossEntropyLoss(weight=cw)  
   # Optimizer
-  optimizer = optim.Adam(mlr.parameters(), lr=parameters["learning_rate"])
+  if parameters["optimizer"] == "Adam":
+    optimizer = optim.Adam(mlr.parameters(), lr=parameters["learning_rate"])
+  else:
+    optimizer = optim.RMSprop(mlr.parameters(), lr=parameters["learning_rate"])
   # Train using CV
-  _, io = train_model(mlr, trainx, optimizer, 25, 0.1, 128)
+  _, io = train_model(mlr, trainx, optimizer, loss_function, 25, 0.1, 128, device = device)
   # Write
   is_min = np.argmin(io["val_loss"])
   with open(args.out_file, 'a') as of_connection:
     writer = csv.writer(of_connection)
     writer.writerow([io["val_loss"][is_min], parameters, is_min, io["val_acc"][is_min]])
   # Return cross-validation loss
-  return({"loss": np.min(io["val_loss"]), "parameters": parameters, 'status':STATUS_OK})
+  return({"loss": np.min(io["val_loss"]), "parameters": parameters, "iteration": is_min, 'status':STATUS_OK})
 
 # Test if works  
-parameters = {"learning_rate": 0.001, "hidden_units": 128, "dropout": 0}
+parameters = {"learning_rate": 0.00104, "hidden_units": 256, "dropout": 0.016, "optimizer": "Adam"}
 po = baselineNN_search(parameters)
 
 # Define the search space
 space = {
-    'hidden_units': hp.choice('hidden_units', [32,64,128,256]),
+    'hidden_units': hp.choice('hidden_units', [64,128,256]),
+    'optimizer': hp.choice("optimizer", ["Adam"]),
     'dropout': hp.uniform("dropout", 0, 0.5),
     'learning_rate': hp.loguniform('learning_rate', np.log(0.0001), np.log(0.01))
 }
@@ -205,3 +216,37 @@ with open(args.out_file, 'w') as of_connection:
 # Optimize
 best = fmin(fn = baselineNN_search, space = space, algo = tpe.suggest, 
             max_evals = args.max_evals, trials = bayes_trials)
+            
+# Save
+import json
+with open("hyperparameters/best_baseline.json", "w") as outFile:
+  # Cast to serializable files
+  best["dropout"] = float(best["dropout"])
+  best["hidden_units"] = 256
+  best["learning_rate"] = float(best["learning_rate"])
+  best["optimizer"] = "Adam"
+  json.dump(best, outFile)
+  
+# Load
+with open("hyperparameters/best_baseline.json", "r") as inFile:
+  parameters = json.load(inFile)
+
+# To device
+mlr = BaselineNN(FTEMB, train_y_ohe.shape[1], parameters["hidden_units"], p_dropout = parameters["dropout"])
+mlr = mlr.to(device)  
+loss_function = nn.CrossEntropyLoss(weight=cw)  
+# Optimizer
+optimizer = optim.Adam(mlr.parameters(), lr=parameters["learning_rate"])
+mlr, io = train_model(mlr, trainx, optimizer, loss_function, 25, 0.1, 128, device = device)
+
+mlr.eval()
+# Predict
+y_pred = mlr(torch.tensor(test.X).type(torch.long).to(device))
+# Retrieve true y
+val, y_true = torch.tensor(test.y).type(torch.long).to(device).max(dim=1)
+# Loss
+loss_val = loss_function(y_pred, y_true)
+# Accuracy
+_, y_pred = y_pred.max(dim=1)
+acc_val = np.int((y_pred == y_true).sum()) / y_pred.size()[0]
+acc_val

@@ -6,10 +6,8 @@ dependencies:
   - pandas
   - spacy=2.0.12
   - nltk
-  - keras-gpu
-  - tensorflow-gpu
-  - pytorch-gpu
-  - cudatoolkit
+  - keras
+  - tensorflow
   - matplotlib
   - scipy
   - scikit-learn
@@ -19,3 +17,4 @@ dependencies:
     - daiquiri
     - hyperopt
     - scorch
+    
