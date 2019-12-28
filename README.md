@@ -24,6 +24,7 @@ conda env create -f environment.yml
 4. Install PyTorch with cuda 9.2 support
 
 ```shell
+conda activate VitalWikiClassifier
 conda install pytorch torchvision cudatoolkit=9.2 -c pytorch -c defaults -c numba/label/dev
 ```
 
