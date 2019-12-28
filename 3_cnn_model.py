@@ -18,6 +18,10 @@ from argparse import Namespace
 
 # Model settings
 args = Namespace(
+  # File to save results
+  out_file = 'results/convNN_trials.csv',
+  # Number of times to evaluate bayesian search for hyperparams
+  max_evals = 500,
   # Size of the vocabulary
   input_vocabulary_size = 15000,
   # Embedding size
@@ -103,31 +107,35 @@ zerovar = np.where(io == 0)[0]
 zerovar_words = {k:v for k,v in WI.items() if v in zerovar}
 zerovar_words
 
+# Load pre-processed embeddings
+with open("embeddings/prep.pickle", "rb") as inFile:
+    FTEMB = pickle.load(inFile)
+
 # Set up a convolutional network
 class Convolutions(nn.Module):
-    def __init__(self, weights, num_classes, max_seq_len, conv_filters):
+    def __init__(self, weights, num_classes, max_seq_len, conv_filters = 100, filter_size = (1,2,3), batch_norm = True, p_dropout = 0):
         super(Convolutions, self).__init__()
         # Get embedding dimensions
         self.weights_dim = weights.shape[1]
         # Set up embedding
         self.embedding = Embedding_FastText(weights, freeze_layer = True)
+        # Set batch norm
+        self.batch_norm = batch_norm
+        self.p_dropout = p_dropout
         # Set up convolutions
-        self.conv1d_f4 = nn.Conv1d(in_channels=self.weights_dim,
-                                   out_channels=conv_filters,
-                                   kernel_size=7)
-        self.conv1d_f5 = nn.Conv1d(in_channels=self.weights_dim,
-                                   out_channels=conv_filters,
-                                   kernel_size=8)
-        self.conv1d_f6 = nn.Conv1d(in_channels=self.weights_dim,
-                                   out_channels=conv_filters,
-                                   kernel_size=9)
-        self.conv1d_f7 = nn.Conv1d(in_channels=self.weights_dim,
-                                   out_channels=conv_filters,
-                                   kernel_size=10)
+        self.convlayer1 = nn.Conv1d(in_channels=self.weights_dim,
+                                                out_channels=conv_filters,
+                                                kernel_size=filter_size[0])
+        self.convlayer2 = nn.Conv1d(in_channels=self.weights_dim,
+                                                out_channels=conv_filters,
+                                                kernel_size=filter_size[1])
+        self.convlayer3 = nn.Conv1d(in_channels=self.weights_dim,
+                                                out_channels=conv_filters,
+                                                kernel_size=filter_size[2])
         # Batch norm
-        self.bn = nn.BatchNorm1d(num_features=4*conv_filters)
+        self.bn = nn.BatchNorm1d(num_features=3*conv_filters)
         # Softmax layer
-        self.linear2 = nn.Linear(4*conv_filters, num_classes)
+        self.linear2 = nn.Linear(3*conv_filters, num_classes)
     def forward(self, input):
         # Call embedding
         embedded = self.embedding(input)
@@ -138,20 +146,20 @@ class Convolutions(nn.Module):
         # Dropout
         embedded = F.dropout(embedded, 0.5)
         # Convolutions with ELU activation
-        convf4_out = F.elu(self.conv1d_f4(embedded))
-        convf5_out = F.elu(self.conv1d_f5(embedded))
-        convf6_out = F.elu(self.conv1d_f6(embedded))
-        convf7_out = F.elu(self.conv1d_f7(embedded))
+        conv1_out = F.elu(self.convlayer1(embedded))
+        conv2_out = F.elu(self.convlayer2(embedded))
+        conv3_out = F.elu(self.convlayer3(embedded))
         # Global max pool across filters
-        convf4_out, _ = convf4_out.max(dim=2)
-        convf5_out, _ = convf5_out.max(dim=2)
-        convf6_out, _ = convf6_out.max(dim=2)
-        convf7_out, _ = convf7_out.max(dim=2)
+        conv1_out, _ = conv1_out.max(dim=2)
+        conv2_out, _ = conv2_out.max(dim=2)
+        conv3_out, _ = conv3_out.max(dim=2)
         # Concatenate
-        concat = torch.cat((convf4_out, convf5_out, convf6_out, convf7_out), 1)
-        concat = self.bn(concat)
+        concat = torch.cat((conv1_out, conv2_out, conv3_out), 1)
+        # Apply batch norm
+        if self.batch_norm:
+          concat = self.bn(concat)
         # Dropout
-        pred = F.dropout(concat, p = 0.5)
+        pred = F.dropout(concat, p = self.p_dropout)
         # Linear
         yhat = self.linear2(pred)
         # Probabilities (logged)
@@ -167,70 +175,111 @@ trainx, test = split(VitalArticles, val_prop = .05, seed = 344)
 # Class weights
 cw = torch.tensor(np.round(np.max(np.sum(train_y_ohe, axis=0)) / (np.sum(train_y_ohe, axis=0)), 1)).type(torch.float).to(device)
 # Set up the classifier
-conv = Convolutions(FTEMB, train_y_ohe.shape[1], args.seq_max_len, 150)
-conv = conv.to(device)  
+#conv = Convolutions(FTEMB, train_y_ohe.shape[1], args.seq_max_len, 100, (3,4,5), True, 0.3)
+#conv = conv.to(device)  
+#loss_function = nn.CrossEntropyLoss(weight=cw)  
+# Optimizer
+#optimizer = optim.Adam(conv.parameters(), lr=args.learning_rate)
+#_, io = train_model(conv, trainx, optimizer, loss_function, 25, 0.1, 128, device = device)
+  
+### Use hyperopt (Bayesian hyperparameter optimization) to search for good hyperparams
+from hyperopt import STATUS_OK
+import csv
+from hyperopt import hp
+# Optimizer
+from hyperopt import tpe
+# Save basic training information
+from hyperopt import Trials
+# Optimizer criterion
+from hyperopt import fmin
+
+# Function that sets up model and outputs and returns validation loss
+def convNN_search(parameters):
+  """Set up, run and evaluate a baseline neural network"""
+  mlr = conv = Convolutions(FTEMB, train_y_ohe.shape[1], args.seq_max_len, 
+                            parameters["filters"], (parameters["filter_size_1"], parameters["filter_size_2"], 
+                            parameters["filter_size_3"]), parameters["batch_norm"], parameters["dropout"])
+  # To device
+  mlr = mlr.to(device)  
+  loss_function = nn.CrossEntropyLoss(weight=cw)  
+  # Optimizer
+  if parameters["optimizer"] == "Adam":
+    optimizer = optim.Adam(mlr.parameters(), lr=parameters["learning_rate"])
+  else:
+    optimizer = optim.RMSprop(mlr.parameters(), lr=parameters["learning_rate"])
+  # Train using CV
+  _, io = train_model(mlr, trainx, optimizer, loss_function, 25, 0.1, 128, device = device)
+  # Write
+  is_min = np.argmin(io["val_loss"])
+  with open(args.out_file, 'a') as of_connection:
+    writer = csv.writer(of_connection)
+    writer.writerow([io["val_loss"][is_min], parameters, is_min, io["val_acc"][is_min]])
+  # Return cross-validation loss
+  return({"loss": np.min(io["val_loss"]), "parameters": parameters, "iteration": is_min, 'status':STATUS_OK})
+
+# Test if works  
+parameters = {"learning_rate": 0.00104, "filters": 100, "filter_size_1":3, 
+              "filter_size_2":4, "filter_size_3":5, "batch_norm": True, 
+              "dropout": 0.016, "optimizer": "Adam"}
+po = convNN_search(parameters)
+
+# Define the search space
+space = {
+    'filters': hp.choice('filters', [100, 150, 200, 250]),
+    'optimizer': hp.choice("optimizer", ["Adam"]),
+    'dropout': hp.uniform("dropout", 0, 0.5),
+    'learning_rate': hp.loguniform('learning_rate', np.log(0.0001), np.log(0.01)),
+    'batch_norm': hp.choice('batch_norm', [True, False]),
+    'filter_size_1': hp.uniformint('filter_size_1', 1, 15),
+    'filter_size_2': hp.uniformint('filter_size_2', 1, 15),
+    'filter_size_3': hp.uniformint('filter_size_3', 1, 15)
+}
+
+# Algorithm
+tpe_algorithm = tpe.suggest
+
+# Trials object to track progress
+bayes_trials = Trials()
+# File to save first results
+with open(args.out_file, 'w') as of_connection:
+  writer = csv.writer(of_connection)
+  # Write the headers to the file
+  writer.writerow(['loss', 'params', 'iteration', 'accuracy'])
+
+# Optimize
+best = fmin(fn = convNN_search, space = space, algo = tpe.suggest, 
+            max_evals = args.max_evals, trials = bayes_trials)
+            
+# Save
+import json
+with open("hyperparameters/best_conv.json", "w") as outFile:
+  # Cast to serializable files
+  best["dropout"] = float(best["dropout"])
+  best["hidden_units"] = 256
+  best["learning_rate"] = float(best["learning_rate"])
+  best["optimizer"] = "Adam"
+  json.dump(best, outFile)
+  
+# Load
+with open("hyperparameters/best_conv.json", "r") as inFile:
+  parameters = json.load(inFile)
+
+# To device
+mlr = BaselineNN(FTEMB, train_y_ohe.shape[1], parameters["hidden_units"], p_dropout = parameters["dropout"])
+mlr = mlr.to(device)  
 loss_function = nn.CrossEntropyLoss(weight=cw)  
 # Optimizer
-optimizer = optim.Adam(conv.parameters(), lr=args.learning_rate)
+optimizer = optim.Adam(mlr.parameters(), lr=parameters["learning_rate"])
+mlr, io = train_model(mlr, trainx, optimizer, loss_function, 25, 0.1, 128, device = device)
 
-# Dictionary to store results
-train_state = make_train_state(args)
-  
-# Epochs
-for epoch_idx in range(args.epochs):
-  # Split train / test
-  trn, tst = split(trainx, val_prop=0.1)
-  # Create training batches
-  batches = batcher(trn, batch_size = args.batch_size, shuffle = True, device = "cpu")
-  # Keep track of loss
-  loss = 0.0
-  acc = 0.0
-  # Training mode
-  conv.train()
-  # For each batch ...
-  for batch_idx, batch_data in enumerate(batches):
-    # Training loop
-    # --------------------
-    # Zero gradients
-    optimizer.zero_grad()
-    # Compute output
-    probs = conv(batch_data["X"].type(torch.long))
-    # Classes
-    valt, y = batch_data["y"].type(torch.long).max(axis=1)
-    # Compute loss
-    loss_batch = loss_function(probs, y)
-    loss += (loss_batch.item() - loss) / (batch_idx + 1)
-    # Compute gradients
-    loss_batch.backward()
-    # Gradient descent
-    optimizer.step()
-    #--------------------
-    # End training loop
-    # Compute accuracy
-    val, yhat = probs.max(axis=1)
-    acc_batch = np.int((yhat == y).sum()) / yhat.size()[0]
-    acc += (acc_batch - acc) / (batch_idx + 1)
-  # Add loss/acc
-  train_state["train_loss"].append(np.round(loss, 4))
-  train_state["train_acc"].append(np.round(acc, 4))
-  # Predict on validation set
-  conv.eval()
-  # Predict
-  y_pred = conv(torch.tensor(tst.X).type(torch.long))
-  # Retrieve true y
-  val, y_true = torch.tensor(tst.y).type(torch.long).max(axis=1)
-  # Loss
-  loss_val = loss_function(y_pred, y_true)
-  # Accuracy
-  val, y_pred = y_pred.max(axis=1)
-  acc_val = np.int((y_pred == y_true).sum()) / y_pred.size()[0]
-  # Add
-  train_state["val_loss"].append(np.round(loss_val.item(), 4))
-  train_state["val_acc"].append(np.round(acc_val, 4))
-
-# Predict on unseen data
-conv.eval()
-yhat_test = conv(torch.tensor(test.X).type(torch.long))
-# Max class
-prob, yhat_class = yhat_test.max(axis=1) 
-sum(np.array(yhat_class) == np.argmax(test.y, axis=1)) / test.y.shape[0]
+mlr.eval()
+# Predict
+y_pred = mlr(torch.tensor(test.X).type(torch.long).to(device))
+# Retrieve true y
+val, y_true = torch.tensor(test.y).type(torch.long).to(device).max(dim=1)
+# Loss
+loss_val = loss_function(y_pred, y_true)
+# Accuracy
+_, y_pred = y_pred.max(dim=1)
+acc_val = np.int((y_pred == y_true).sum()) / y_pred.size()[0]
+acc_val
