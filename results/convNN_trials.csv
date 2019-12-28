@@ -98,3 +98,8 @@ loss,params,iteration,accuracy
 1.5165,"{'batch_norm': True, 'dropout': 0.3124208554203663, 'filter_size_1': 11, 'filter_size_2': 6, 'filter_size_3': 14, 'filters': 250, 'learning_rate': 0.005794269300449608, 'optimizer': 'Adam'}",24,0.9474
 1.4829,"{'batch_norm': True, 'dropout': 0.03360291514638389, 'filter_size_1': 14, 'filter_size_2': 7, 'filter_size_3': 5, 'filters': 100, 'learning_rate': 0.0012981505870378624, 'optimizer': 'Adam'}",23,0.9803
 1.4764,"{'batch_norm': True, 'dropout': 0.07705412768186165, 'filter_size_1': 15, 'filter_size_2': 9, 'filter_size_3': 4, 'filters': 250, 'learning_rate': 0.0016964167095829593, 'optimizer': 'Adam'}",20,0.9868
+1.5042,"{'batch_norm': True, 'dropout': 0.3745139562069599, 'filter_size_1': 6, 'filter_size_2': 11, 'filter_size_3': 6, 'filters': 150, 'learning_rate': 0.00042630122659297683, 'optimizer': 'Adam'}",24,0.9632
+1.5253,"{'batch_norm': True, 'dropout': 0.08879436262895496, 'filter_size_1': 13, 'filter_size_2': 8, 'filter_size_3': 12, 'filters': 250, 'learning_rate': 0.0001001498002359161, 'optimizer': 'Adam'}",23,0.9526
+1.4896,"{'batch_norm': True, 'dropout': 0.2882250189770702, 'filter_size_1': 5, 'filter_size_2': 10, 'filter_size_3': 15, 'filters': 250, 'learning_rate': 0.0024728830885362946, 'optimizer': 'Adam'}",22,0.9737
+1.4885,"{'batch_norm': True, 'dropout': 0.13121108293875425, 'filter_size_1': 12, 'filter_size_2': 2, 'filter_size_3': 10, 'filters': 100, 'learning_rate': 0.0007179273226302119, 'optimizer': 'Adam'}",24,0.9789
+1.4953,"{'batch_norm': True, 'dropout': 0.05488577594896357, 'filter_size_1': 15, 'filter_size_2': 6, 'filter_size_3': 5, 'filters': 250, 'learning_rate': 0.00019623933457217876, 'optimizer': 'Adam'}",24,0.9684

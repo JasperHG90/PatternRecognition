@@ -1,5 +1,5 @@
 ## Look at the results of the model
-m <- "results/basicNN_trials.csv"
+m <- "results/convNN_trials.csv"
 io <- read.csv(m, stringsAsFactors = FALSE)
 # Get json
 hparams <- io$params
