@@ -197,6 +197,7 @@ def baselineNN_search(parameters):
     optimizer=optim.Adam if parameters["optimizer"] == "Adam" else optim.RMSprop,
     # Loss function
     criterion=nn.CrossEntropyLoss,
+    criterion__weight = cw,
     # Shuffle training data on each epoch
     iterator_train__shuffle=True,
     # Batch size
@@ -205,9 +206,6 @@ def baselineNN_search(parameters):
     # Device
     device = device
   )
-  # Add class weights
-  if parameters["weighted_loss"]:
-    net.criterion__weight = cw
   # Verbose to false
   net.verbose = 0
   # Fit
@@ -241,10 +239,9 @@ def baselineNN_search(parameters):
 space = {
     'hidden_units': hp.choice('hidden_units', [64,128,256,512]),
     'optimizer': hp.choice("optimizer", ["Adam", "RMSprop"]),
-    'weighted_loss': hp.choice("weighted_loss", [True, False]),
     'use_batch_norm': hp.choice("use_batch_norm", [True, False]),
     'dropout': hp.choice("dropout", [0, .05, .1, .15, .2, .25, .3, .35, .4, .45, .5]),
-    'learning_rate': hp.loguniform('learning_rate', np.log(0.001), np.log(0.01))
+    'learning_rate': hp.loguniform('learning_rate', np.log(0.001), np.log(0.02))
 }
 
 # Test if works  
@@ -266,33 +263,20 @@ with open(args.out_file, 'w') as of_connection:
 # Optimize
 best = fmin(fn = baselineNN_search, space = space, algo = tpe.suggest, 
             max_evals = args.max_evals, trials = bayes_trials)
-            
-# Save
-with open("hyperparameters/best_baseline.pickle", "wb") as outFile:
-  best["optimizer"] = "Adam"
-  best["use_batch_norm"] = True
-  best["hidden_units"] = 256
-  pickle.dump(best, outFile)
   
-# Load
-with open("hyperparameters/best_baseline.pickle", "rb") as inFile:
-  parameters = pickle.load(inFile)
-  
-## Run on final test data
-
 # Run the model with the best paramaters
 net = NeuralNet(
     # Module
     module=BaselineNN,
     # Module settings
-    module__hidden_dim = 256,
+    module__hidden_dim = 512,
     module__p_dropout = 0.1,
     module__use_batch_norm = True,
     module__weights = FTEMB,
     module__num_classes = len(catmap),
     # Epochs & learning rate
     max_epochs=25,
-    lr=0.00214,
+    lr=0.00172,
     # Optimizer
     optimizer=optim.Adam,
     # Loss function
