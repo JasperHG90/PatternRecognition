@@ -16,5 +16,6 @@ dependencies:
     - textsearch
     - daiquiri
     - hyperopt
-    - scorch
+    - skorch
+    - syntok
     

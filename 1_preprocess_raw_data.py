@@ -31,7 +31,7 @@ inputs = {"History":{}, "Geography":{}, "Philosophy_and_religion":{},
 failed = []
 previous_docnr = "default"
 #stop = 100
-with open(os.path.join(DATA_DIR, "WikiEssentials_L4.txt"), "r") as inFile:
+with open(os.path.join(DATA_DIR, "WikiEssentials_L4.txt"), "r", encoding="utf8") as inFile:
     # Counter for the number of sentences processed
     sentcount = 0
     # Capture sentences
@@ -108,7 +108,7 @@ for k, v in inputs.items():
 print(sum([len(v) for v in inputs.values()]))
     
 # Remove people for now
-inputs = {k:v for k,v in inputs.items() if k != "People"}
+#inputs = {k:v for k,v in inputs.items() if k != "People"}
 
 # Save preprocessed data to disk
 with open(os.path.join(DATA_DIR, '{}_P3_preprocessed.pickle'.format(DATA_PREFIX)), 'wb') as handle:

@@ -1,5 +1,5 @@
 ## Look at the results of the model
-m <- "results/convNN_trials.csv"
+m <- "results/basicNN_trials.csv"
 io <- read.csv(m, stringsAsFactors = FALSE)
 # Get json
 hparams <- io$params
@@ -30,8 +30,10 @@ library(purrr)
 library(dplyr)
 hparams_processed <- map_df(hparams, outpar) %>%
   mutate(loss = io$loss) %>%
-  mutate(batch_norm = ifelse(batch_norm == "True", TRUE, FALSE),
-         quantilegrp = cut(loss, quantile(loss)))
+  mutate(use_batch_norm = ifelse(use_batch_norm == "True", TRUE, FALSE),
+         quantilegrp = cut(loss, quantile(loss)),
+         optimizer_adam = ifelse(optimizer == "Adam", TRUE, FALSE)) %>%
+  select(-optimizer)
 
 # Plot some density plots
 library(ggplot2)
@@ -39,15 +41,16 @@ library(ggExtra)
 
 # Plot params across trends
 library(tidyr)
-hparams_processed %>%
+i <- hparams_processed %>%
   mutate(iteration = 1:n()) %>%
-  select(-quantilegrp, -optimizer) %>%
+  select(-quantilegrp) %>%
   gather(variable, value, -iteration) %>%
   ggplot(., aes(x=iteration, y =value, color = variable)) +
-  geom_point() +
-  geom_smooth(se = FALSE, color = "grey") +
-  theme_bw() +
-  facet_wrap(.~ variable, nrow = 3, scales = "free_y")
+    geom_point() +
+    geom_smooth(se = FALSE, color = "grey") +
+    theme_bw() +
+    facet_wrap(.~ variable, nrow = 3, scales = "free_y")
+i
 
 # Learning rate
 ggplot(hparams_processed, aes(x=(learning_rate))) +
@@ -58,9 +61,11 @@ ggplot(hparams_processed, aes(x=(learning_rate))) +
                    pull()),
              color = "blue", linetype = "dashed", 
              size = 1.2)
+# Mean learning rate
+exp(mean(log(hparams_processed$learning_rate)))
 
 # Learning rate versus dropout
-p2 <- ggplot(hparams_processed, aes(x = log(learning_rate), y = dropout)) +
+p2 <- ggplot(hparams_processed, aes(x = log(learning_rate), y = log(dropout))) +
   geom_point() +
   geom_vline(aes(xintercept = hparams_processed %>%
                    filter(loss == min(loss)) %>%
@@ -72,7 +77,8 @@ p2 <- ggplot(hparams_processed, aes(x = log(learning_rate), y = dropout)) +
   geom_hline(aes(yintercept = hparams_processed %>%
                    filter(loss == min(loss)) %>%
                    select(dropout) %>%
-                   pull()),
+                   pull() %>%
+                   log(.)),
              color = "green", linetype = "dashed", 
              size = 1.2)
 ggExtra::ggMarginal(p2, type = "histogram")
@@ -83,8 +89,8 @@ ggplot(hparams_processed %>% group_by(hidden_units) %>%
     geom_bar(stat = "identity")
 # Model clearly favours larger architecture
 
-ggplot(hparams_processed %>% group_by(filter_size_3) %>%
-         tally(), aes(x= filter_size_3, y = n)) +
+ggplot(hparams_processed %>% group_by(filter_size_1) %>%
+         tally(), aes(x= filter_size_1, y = n)) +
   geom_bar(stat = "identity")
 
 ggplot(hparams_processed, aes(x=learning_rate, y = loss)) +
@@ -104,5 +110,5 @@ ggplot(hparams_processed, aes(x=dropout, y = loss)) +
 
 library(plotly)
 plot_ly(hparams_processed, x =~log(learning_rate), y=~dropout, z=~loss, color = ~quantilegrp,
-        symbol = ~batch_norm, symbols = c("circle", "x")) %>%
+        symbol = ~use_batch_norm, symbols = c("circle", "x")) %>%
   add_markers()
