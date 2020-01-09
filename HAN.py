@@ -24,6 +24,7 @@ from keras.preprocessing.text import Tokenizer # Use keras for tokenization & pr
 from keras import preprocessing
 import matplotlib.pyplot as plt
 from model_utils import load_FT, Embedding_FastText, WikiData, split
+from collections import defaultdict
 
 #%%
 
@@ -33,7 +34,7 @@ from argparse import Namespace
 # Model settings
 args = Namespace(
   # File to save results
-  out_file = 'results/basicNN_trials.csv',
+  out_file = 'results/HAN_trials.csv',
   # Number of times to evaluate bayesian search for hyperparams
   max_evals = 200,
   # Size of the vocabulary
@@ -41,7 +42,7 @@ args = Namespace(
   # Embedding size
   embedding_dim = 300,
   # Max length of text sequences
-  seq_max_len = 150,
+  seq_max_len = 20,
   # NN settings
   learning_rate = 0.0001,
   batch_size = 128,
@@ -56,8 +57,10 @@ with open("data/WikiEssentials_L4_P3_preprocessed.pickle", "rb") as inFile:
 # Process each
 train_x = []
 train_y = []
+doc_id_map = []
 catmap = {}
 
+doc_id_lookup = 0
 # For each
 for idx, itms in enumerate(input_data.items()):
   # Label and texts
@@ -65,19 +68,21 @@ for idx, itms in enumerate(input_data.items()):
   txts = itms[1]
   catmap[cat] = itms[0]
   # For each text, append
-  for doc, txt_lst in txts.items():
+  for doc_id, txt_lst in txts.items():
     xo= 0
     #if len(txt_lst) < 3:
     #  continue
     par_out = []
-    for txt in txt_lst:
+    for idx_sentence, txt in enumerate(txt_lst):
       if xo == 8:
         xo = 0
         break
-      par_out.append(txt)
+      train_x.append(txt)
       xo += 1
+      doc_id_map.append(doc_id_lookup)
     train_x.append(" ".join(par_out).replace("'s", ""))
     train_y.append(cat)
+    doc_id_lookup += 1
 
 # Preprocess outcome label
 train_y_ohe = np.zeros((len(train_y), len(input_data.keys())))
@@ -92,14 +97,14 @@ tokenizer = Tokenizer(num_words=args.input_vocabulary_size,
 # Fit on the documents
 tokenizer.fit_on_texts(train_x)
 
-#%% Number of unique words
+# Number of unique words
 word_index = tokenizer.word_index
 print('Found %s unique tokens.' % len(word_index))
 
-#%% To sequence (vectorize)
+# To sequence (vectorize)
 x_train = tokenizer.texts_to_sequences(train_x)
 
-#%% Average length
+# Average length
 seq_len = [len(x) for x in x_train]
 print(np.median(seq_len))
 print(np.max(seq_len))
@@ -107,9 +112,23 @@ print(np.max(seq_len))
 # Pad sequences
 train = preprocessing.sequence.pad_sequences(x_train, maxlen=args.seq_max_len)
 
+#%% HAN embeddings
+
 # Get tokens to be looked up in FT embedding
 WI = {k:v for k,v in tokenizer.word_index.items() if v <= (args.input_vocabulary_size - 1)}
-with open("embeddings/prep.pickle", "rb") as inFile:
+FTEMB = load_FT("embeddings/wiki-news-300d-1M.vec", WI, args.embedding_dim, args.input_vocabulary_size)
+# Check which are 0
+io = np.sum(FTEMB, axis=1)
+zerovar = np.where(io == 0)[0]
+# Get words
+zerovar_words = {k:v for k,v in WI.items() if v in zerovar}
+zerovar_words
+# Save embeddings
+with open("embeddings/HAN_prep.pickle", 'wb') as handle:
+  pickle.dump(FTEMB,  handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+# Get tokens to be looked up in FT embedding
+with open("embeddings/HAN_prep.pickle", "rb") as inFile:
     FTEMB = pickle.load(inFile)
 
 #%%
@@ -160,20 +179,23 @@ class Attention(nn.Module):
         # Sentence vectors
         # (see equation 7)
         # Apply the attention weights (alphas) to each hidden state
-        for idx in range(0, hidden_states.size(0)):
+        sentence = torch.sum(torch.mul(alphas, hidden_states), dim=1)
+        #for idx in range(0, hidden_states.size(0)):
             # Get hidden state at time t
-            hidden_current = hidden_states[idx]
+        #    hidden_current = hidden_states[idx]
             # Get attention weights at time t
-            alphas_current = alphas[idx]
+        #    alphas_current = alphas[idx]
             # Hadamard product (element-wise)
-            vector_weighted = hidden_current * alphas_current
+        #    vector_weighted = hidden_current * alphas_current
             # Concatenate
-            if idx > 0:
-                s = torch.cat((s, vector_weighted), 0)
-            else:
-                s = vector_weighted
+        #    if idx > 0:
+        #        s = torch.cat((s, vector_weighted), 0)
+        #    else:
+        #        s = vector_weighted
         # Sum across time axis (0)
-        return(torch.sum(s, 0))
+        #return(torch.sum(s, 0))
+        # Return
+        return(sentence)
 
 #%%
 
