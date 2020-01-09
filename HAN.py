@@ -23,7 +23,7 @@ import os
 from keras.preprocessing.text import Tokenizer # Use keras for tokenization & preprocessing
 from keras import preprocessing
 import matplotlib.pyplot as plt
-from model_utils import load_FT, Embedding_FastText, WikiData, split, batcher, train_model
+from model_utils import load_FT, Embedding_FastText, WikiData, split
 
 #%%
 
@@ -109,13 +109,8 @@ train = preprocessing.sequence.pad_sequences(x_train, maxlen=args.seq_max_len)
 
 # Get tokens to be looked up in FT embedding
 WI = {k:v for k,v in tokenizer.word_index.items() if v <= (args.input_vocabulary_size - 1)}
-FTEMB = load_FT("embeddings/wiki-news-300d-1M.vec", WI, args.embedding_dim, args.input_vocabulary_size)
-# Check which are 0
-io = np.sum(FTEMB, axis=1)
-zerovar = np.where(io == 0)[0]
-# Get words
-zerovar_words = {k:v for k,v in WI.items() if v in zerovar}
-zerovar_words
+with open("embeddings/prep.pickle", "rb") as inFile:
+    FTEMB = pickle.load(inFile)
 
 #%%
 
@@ -183,8 +178,56 @@ class Attention(nn.Module):
 #%%
 
 # Set up an embedding
-embedding = Embedding_FastText(weights, freeze_layer = True)    
-Encoder_GRU = nn.GRU(weights.shape[1], 32, bidirectional = True)
+embedding = Embedding_FastText(FTEMB, freeze_layer = True)    
+Encoder_GRU = nn.GRU(FTEMB.shape[1], 32, bidirectional = True, batch_first= True)
+
+#%% 
+
+inputs_x = [trainx.__getitem__(idx)[0] for idx in range(0, 10)]
+
+#%%
+
+inputs_stacked = torch.stack(inputs_x, 0)
+inputs_stacked.shape
+
+#%%
+
+# Embed
+emb_out = embedding(inputs_stacked)
+
+#%%
+
+# GRU
+GRU_out, hidden_out = Encoder_GRU(emb_out)
+# NB: GRU_out contains the hidden states for 1,...,T
+#      (https://discuss.pytorch.org/t/how-to-retrieve-hidden-states-for-all-time-steps-in-lstm-or-bilstm/1087/14)
+# DIM: (directions, input_sentence_length, hidden_dim)
+
+#%% 
+
+layer1 = nn.Linear(2 * 32, 2 * 32)
+
+#%%
+
+layer2 = nn.Linear(2 * 32, 2 * 32, bias = False)
+
+#%%
+
+GRU_attended = layer1(GRU_out)
+
+#%%
+
+GRU_attended = F.tanh(GRU_attended)
+
+#%%
+
+attention_weights = F.softmax(layer2(GRU_attended), dim=1)
+
+#%% Torch mul
+
+sentence = torch.mul(GRU_out, attention_weights)
+sentence = torch.sum(sentence, dim=1)
+# DIM: (batch_size, 2*hidden_dim)
 
 #%%
 
