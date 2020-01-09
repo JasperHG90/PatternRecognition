@@ -12,7 +12,7 @@ import os
 from keras.preprocessing.text import Tokenizer # Use keras for tokenization & preprocessing
 from keras import preprocessing
 import matplotlib.pyplot as plt
-from model_utils import load_FT, Embedding_FastText, WikiData, split, batcher, train_model
+from model_utils import load_FT, Embedding_FastText, WikiData, split
 
 # Details for this script
 from argparse import Namespace
