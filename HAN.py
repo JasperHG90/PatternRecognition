@@ -1,5 +1,16 @@
-## Baseline model
+## Implementation of a Hierarchical Attention Network (HAN)
+##
+## This implementation is based on the following paper
+##
+##   Yang, Z., Yang, D., Dyer, C., He, X., Smola, A., & Hovy, E. (2016, June). Hierarchical 
+##     attention networks for document classification. In Proceedings of the 2016 conference 
+##     of the North American chapter of the association for computational linguistics: human 
+##     language technologies (pp. 1480-1489).
+##
+## Written by: Jasper Ginn <j.h.ginn@uu.nl>
+## Course: Pattern Recognition @ Utrecht University
 
+#%% Setup
 import torch
 import torch.nn as nn
 from torch import optim
@@ -13,6 +24,8 @@ from keras.preprocessing.text import Tokenizer # Use keras for tokenization & pr
 from keras import preprocessing
 import matplotlib.pyplot as plt
 from model_utils import load_FT, Embedding_FastText, WikiData, split, batcher, train_model
+
+#%%
 
 # Details for this script
 from argparse import Namespace
@@ -104,20 +117,89 @@ zerovar = np.where(io == 0)[0]
 zerovar_words = {k:v for k,v in WI.items() if v in zerovar}
 zerovar_words
 
-# Set up a softmax layer
-# One-layer NN with softmax on top
-class BaselineNN(nn.Module):
-    def __init__(self, weights, num_classes, hidden_dim, p_dropout = 0):
+#%%
+
+# Load data in Pytorch 'Dataset' format
+# See 'model_utils.py'
+VitalArticles = WikiData(train, train_y_ohe)
+
+# Split data
+# Returns two instances of 'WikiData' (train and test)
+trainx, test = split(VitalArticles, val_prop = .05, seed = 856)
+
+# Class weights
+# These weights are unnormalized but that's what pytorch is expecting
+cw = torch.tensor(np.max(np.sum(train_y_ohe, axis=0)) / (np.sum(train_y_ohe, axis=0))).type(torch.float).to(device)
+
+#%% Attention layers
+
+class Attention(nn.Module):
+    def __init__(self, hidden_size):
+        """
+        Attention mechanism.
+
+        :param hidden_size: size of the hidden states of the bidirectional GRU
+
+        :seealso: https://pytorch.org/docs/stable/nn.html#gru for the output size of the GRU encoder (bidirectional)
+
+        :return:
+        """
+        super(Attention, self).__init__()
+        self._hidden_size = hidden_size
+        # Linear layer for the tanh activation (eq. 5 in paper)
+        #  (times two because bidirectional)
+        self._layer1 = nn.Linear(2 * hidden_size, 2 * hidden_size)
+        # Linear layer for the softmax activation (eq. 6 in paper)
+        self._layer2 = nn.Linear(2 * hidden_size, 2 * hidden_size, bias = False)
+    def forward(self, hidden_states):
+        """
+        Forward pass of the attention mechanism
+
+        :param hidden_states: The hidden states of the input sequence at all times T.
+        """
+        # (see equation 5)
+        u = F.tanh(self._layer1(hidden_states))
+        # (see equation 6)
+        alphas = F.softmax(self._layer2(u), dim=1)
+        # --> current dimensions: X x Y x Z
+        # Sentence vectors
+        # (see equation 7)
+        # Apply the attention weights (alphas) to each hidden state
+        for idx in range(0, hidden_states.size(0)):
+            # Get hidden state at time t
+            hidden_current = hidden_states[idx]
+            # Get attention weights at time t
+            alphas_current = alphas[idx]
+            # Hadamard product (element-wise)
+            vector_weighted = hidden_current * alphas_current
+            # Concatenate
+            if idx > 0:
+                s = torch.cat((s, vector_weighted), 0)
+            else:
+                s = vector_weighted
+        # Sum across time axis (0)
+        return(torch.sum(s, 0))
+
+#%%
+
+# Set up an embedding
+embedding = Embedding_FastText(weights, freeze_layer = True)    
+Encoder_GRU = nn.GRU(weights.shape[1], 32, bidirectional = True)
+
+#%%
+
+## Word-level GRU + attention
+class HAN_word(nn.Module):
+    def __init__(self, weights, hidden_dim):
         super(BaselineNN, self).__init__()
-        self._p_dropout = p_dropout
         # Get embedding dimensions
         self.weights_dim = weights.shape[1]
         # Set up embedding
         self.embedding = Embedding_FastText(weights, freeze_layer = True)
-        # Set up hidden layer
-        self.linear1 = nn.Linear(self.weights_dim, hidden_dim)
-        # Set up softmax layer
-        self.linear2 = nn.Linear(hidden_dim, num_classes)
+        # Set up bidirectional GRU encoder
+        self.Encoder_GRU = nn.GRU(self.weights_dim, hidden_dim, bidirectional = True)
+        # Attention layer
+        self.attention
     def forward(self, input, dropout = 0):
         # Call embedding
         embedded = self.embedding(input).sum(dim=1)
@@ -131,77 +213,7 @@ class BaselineNN(nn.Module):
         yhat = F.softmax(yhat, dim=1)
         return(yhat)
 
-# Load data in Pytorch 'Dataset' format
-# See 'model_utils.py'
-VitalArticles = WikiData(train, train_y_ohe)
+## Sentence-level GRU + attention
 
-# Split data
-# Returns two instances of 'WikiData' (train and test)
-trainx, test = split(VitalArticles, val_prop = .05, seed = 856)
 
-# Class weights
-# These weights are unnormalized but that's what pytorch is expecting
-cw = torch.tensor(np.max(np.sum(train_y_ohe, axis=0)) / (np.sum(train_y_ohe, axis=0))).type(torch.float).to(device)
-# Set up the classifier
-# Hidden dim neurons: 128
-#mlr = BaselineNN(FTEMB, train_y_ohe.shape[1], 128)
-#mlr = mlr.to(device)  
-#loss_function = nn.CrossEntropyLoss(weight=cw)  
-# Optimizer
-#optimizer = optim.Adam(mlr.parameters(), lr=args.learning_rate)
-
-### Use hyperopt (Bayesian hyperparameter optimization) to search for good hyperparams
-from hyperopt import STATUS_OK
-import csv
-from hyperopt import hp
-# Optimizer
-from hyperopt import tpe
-# Save basic training information
-from hyperopt import Trials
-# Optimizer criterion
-from hyperopt import fmin
-
-# Function that sets up model and outputs and returns validation loss
-def baselineNN_search(parameters):
-  """Set up, run and evaluate a baseline neural network"""
-  mlr = BaselineNN(FTEMB, train_y_ohe.shape[1], parameters["hidden_units"], p_dropout = parameters["dropout"])
-  # To device
-  mlr = mlr.to(device)  
-  loss_function = nn.CrossEntropyLoss(weight=cw)  
-  # Optimizer
-  optimizer = optim.Adam(mlr.parameters(), lr=parameters["learning_rate"])
-  # Train using CV
-  _, io = train_model(mlr, trainx, optimizer, 25, 0.1, 128)
-  # Write
-  is_min = np.argmin(io["val_loss"])
-  with open(args.out_file, 'a') as of_connection:
-    writer = csv.writer(of_connection)
-    writer.writerow([io["val_loss"][is_min], parameters, is_min, io["val_acc"][is_min]])
-  # Return cross-validation loss
-  return({"loss": np.min(io["val_loss"]), "parameters": parameters, 'status':STATUS_OK})
-
-# Test if works  
-parameters = {"learning_rate": 0.001, "hidden_units": 128, "dropout": 0}
-po = baselineNN_search(parameters)
-
-# Define the search space
-space = {
-    'hidden_units': hp.choice('hidden_units', [32,64,128,256]),
-    'dropout': hp.uniform("dropout", 0, 0.5),
-    'learning_rate': hp.loguniform('learning_rate', np.log(0.0001), np.log(0.01))
-}
-
-# Algorithm
-tpe_algorithm = tpe.suggest
-
-# Trials object to track progress
-bayes_trials = Trials()
-# File to save first results
-with open(args.out_file, 'w') as of_connection:
-  writer = csv.writer(of_connection)
-  # Write the headers to the file
-  writer.writerow(['loss', 'params', 'iteration', 'accuracy'])
-
-# Optimize
-best = fmin(fn = baselineNN_search, space = space, algo = tpe.suggest, 
-            max_evals = args.max_evals, trials = bayes_trials)
+## Make HAN module
