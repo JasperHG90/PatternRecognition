@@ -37,6 +37,8 @@ args = Namespace(
   out_file = 'results/HAN_trials.csv',
   # Number of times to evaluate bayesian search for hyperparams
   max_evals = 200,
+  # Number of input sentences
+  number_of_sentences = 8,
   # Size of the vocabulary
   input_vocabulary_size = 15000,
   # Embedding size
@@ -131,20 +133,6 @@ with open("embeddings/HAN_prep.pickle", 'wb') as handle:
 with open("embeddings/HAN_prep.pickle", "rb") as inFile:
     FTEMB = pickle.load(inFile)
 
-#%%
-
-# Load data in Pytorch 'Dataset' format
-# See 'model_utils.py'
-VitalArticles = WikiData(train, train_y_ohe)
-
-# Split data
-# Returns two instances of 'WikiData' (train and test)
-trainx, test = split(VitalArticles, val_prop = .05, seed = 856)
-
-# Class weights
-# These weights are unnormalized but that's what pytorch is expecting
-cw = torch.tensor(np.max(np.sum(train_y_ohe, axis=0)) / (np.sum(train_y_ohe, axis=0))).type(torch.float).to(device)
-
 #%% Attention layers
 
 class Attention(nn.Module):
@@ -197,25 +185,254 @@ class Attention(nn.Module):
         # Return
         return(sentence)
 
+#%% Word encoder
+
+class word_encoder(nn.Module):
+    def __init__(self, weights, hidden_size):
+        super(word_encoder, self).__init__()
+        self._hidden_size = hidden_size
+        self._weight_input_size = weights.shape[1]
+        # Embedding
+        self.embedding = Embedding_FastText(weights, freeze_layer = True)
+        # Word-GRU
+        self.GRU = nn.GRU(self._weight_input_size, self._hidden_size,
+                        bidirectional=True, batch_first=True)       
+        # Attention
+        self.attention = Attention(self._hidden_size)
+    def forward(self, inputs):
+        """
+        :param inputs: input document with dim (sentence x seq_length)
+        """
+        # Embedding
+        embedded = self.embedding(inputs)
+        # Bidirectional GRU
+        output_gru, _ = self.GRU(embedded)
+        # Attention
+        output_attention = self.attention(output_gru)
+        # Return
+        return(output_attention.unsqueeze(dim=1))
+
+class sentence_encoder(nn.Module):
+    def __init__(self, hidden_size):
+        super(sentence_encoder, self).__init__()
+        self._hidden_size = hidden_size
+        # Sentence-GRU
+        self.GRU = nn.GRU(self._hidden_size * 2, self._hidden_size,
+                        bidirectional=True, batch_first=True)       
+        # Attention
+        self.attention = Attention(hidden_size)
+    def forward(self, encoder_output):
+        """
+        :param encoder_output: output of the word encoder with shape (sentences x 1 x 2 * hidden_dim)
+        """
+        # Bidirectional GRU
+        output_gru, _ = self.GRU(encoder_output)
+        # Attention
+        #  Permute output_gru s.t. we go from (sentences, 1, 2*hidden_dim) to
+        #  (1, sentences, 2*hidden_dim). This ensures that we take sum across
+        #  sentences.
+        output_attention = self.attention(output_gru.permute(1, 0, 2))
+        # Return
+        return(output_attention) 
+
+class HAN(nn.Module):
+    def __init__(self, weights, hidden_size, num_classes):
+        super(HAN, self).__init__()
+        self._hidden_size = hidden_size
+        self._embedding_dim = weights.shape
+        self._num_classes = num_classes
+        # Set up word encoder
+        self._word_encoder = word_encoder(weights, self._hidden_size)
+        # Set up sentence encoder
+        self._sentence_encoder = sentence_encoder(self._hidden_size)
+        # Set up a linear layer
+        self._linear1 = nn.Linear(self._hidden_size * 2, self._num_classes)
+    def forward(self, input_document):
+        """
+        :param input_document: input document with dim (sentence x seq_length)
+        """
+        # Put document through word encoder
+        sentences_encoded = self._word_encoder(input_document)
+        # Put sentences through sentence encoder
+        document_encoded = self._sentence_encoder(sentences_encoded)
+        # Linear layer & softmax
+        prediction_out = F.softmax(self._linear1(document_encoded.flatten()))
+        # Return
+        return(prediction_out)
+
+#%% WikiData class for HAN
+
+class WikiData(Dataset):
+    def __init__(self, document_ids, X, y):
+        # Assert tensors
+        assert type(X) == np.ndarray, "'X' must be numpy array"
+        assert type(y) == np.ndarray, "'y' must be numpy array"
+        # Reshape input based on doc ids
+        X_3D = np.zeros((len(np.unique(document_ids)), args.number_of_sentences, args.seq_max_len), dtype = np.int)
+        # Insert each document into the new input array
+        document_idx_prev = None
+        sentence_idx = 0
+        for total_idx, document_idx in enumerate(document_ids):
+            if document_idx == document_idx_prev:
+                sentence_idx += 1
+            else:
+                sentence_idx = 0
+            # Insert
+            X_3D[document_idx, sentence_idx, :] = X[total_idx,:]
+            document_idx_prev = document_idx
+        # Must be same length
+        assert X_3D.shape[0] == y.shape[0], "'X' and 'y' different lengths"
+        self.X = X_3D
+        self.y = y
+        self.len = X_3D.shape[0]
+    def __getitem__(self, index):
+        return(torch.tensor(self.X[index,:,:]).type(torch.long), torch.tensor(self.y[index]).type(torch.long))
+    def __len__(self):
+        return(self.len)
+
+#%%
+
+# Load data in Pytorch 'Dataset' format
+# See 'model_utils.py'
+VitalArticles = WikiData(doc_id_map ,train, np.array(train_y))
+
+#%%
+
+# Class weights
+# These weights are unnormalized but that's what pytorch is expecting
+cw = torch.tensor(np.max(np.sum(train_y_ohe, axis=0)) / (np.sum(train_y_ohe, axis=0))).type(torch.float).to(device)
+
+#%% Reshape input document
+
+idx = [i for i in range(2320)]
+Xy = [VitalArticles.__getitem__(i) for i in idx]
+# Random permutation
+np.random.seed(6782)
+perm = np.random.permutation(len(Xy))
+Xy = [Xy[idx] for idx in perm]
+
+#%% Make weights
+
+cw = torch.tensor(np.max(np.sum(train_y_ohe[:,0:3], axis=0)) / (np.sum(train_y_ohe[:,0:3], axis=0))).type(torch.float).to(device)
+
+#%% Train function
+
+# Set up the model
+WikiHAN = HAN(FTEMB, 64, 3)
+
+# Set up optimizer
+optimizer = optim.Adam(WikiHAN.parameters(), lr = 0.0001)
+
+# Criterion
+criterion = nn.CrossEntropyLoss()
+
+# Track loss
+train_loss = []
+
+#%%
+
+# Epochs
+for epoch in range(0, 3):
+    running_loss = 0.0
+    # For each train/test example
+    for idx, input in enumerate(Xy):
+
+        WikiHAN.train()
+
+        # Input document
+        input_doc = input[0]
+        input_class = input[1]
+
+        # Zero gradients
+        WikiHAN.zero_grad()
+
+        # Predict output
+        predict_out = WikiHAN(input_doc)
+
+        # Loss
+        loss_out = criterion(predict_out.unsqueeze(0), input_class.unsqueeze(0))
+        # As item
+        loss_value = loss_out.item()
+        running_loss += (loss_value - running_loss) / (idx + 1)
+        if idx % 100 == 0:
+            print("Loss is {} on iteration {} for epoch {} ...".format(running_loss, idx, epoch))
+
+        # Produce gradients
+        loss_out.backward()
+
+        # Make step
+        optimizer.step()
+
+    # Append loss
+    train_loss.append(running_loss)
+
+    # Predict
+    pred = []
+    with torch.no_grad():
+        WikiHAN.eval()
+        for idx, input in enumerate(Xy):
+            out = WikiHAN(input[0])
+            pred.append(torch.argmax(out).numpy())
+
+    pred = np.vstack(pred).squeeze()
+    ytrue = VitalArticles.y[:2320]
+
+    # Print
+    print("-------------")
+    print("Loss is {} at epoch {} ...".format(running_loss, epoch))
+    print("Accuracy is {} at epoch {} ...".format(np.sum(pred == ytrue) / ytrue.shape[0],epoch))
+    print("-------------")
+
+#%% Run the training function
+
+pred = []
+with torch.no_grad():
+    WikiHAN.eval()
+    for idx, input in enumerate(Xy):
+        out = WikiHAN(input[0])
+        pred.append(torch.argmax(out).numpy())
+
+#%% To NP
+
+pred = np.vstack(pred).squeeze()
+ytrue = VitalArticles.y[:2320]
+
+#%% Set up a HAN
+
+
+
+#%% Run doc through HAN
+
+HAN_out = WikiHAN(inputs_x)
+
+#%% Word encoder
+
+WE = word_encoder(FTEMB, 32)
+sentences = WE(inputs_x)
+
+#%% Sentence encoder
+
+SE = sentence_encoder(32)
+document = SE(sentences)
+
 #%%
 
 # Set up an embedding
 embedding = Embedding_FastText(FTEMB, freeze_layer = True)    
 Encoder_GRU = nn.GRU(FTEMB.shape[1], 32, bidirectional = True, batch_first= True)
 
-#%% 
 
-inputs_x = [trainx.__getitem__(idx)[0] for idx in range(0, 10)]
 
 #%%
 
-inputs_stacked = torch.stack(inputs_x, 0)
-inputs_stacked.shape
+#inputs_stacked = torch.stack(inputs_x, 0)
+#inputs_stacked.shape
 
 #%%
 
 # Embed
-emb_out = embedding(inputs_stacked)
+emb_out = embedding(inputs_x)
+emb_out.shape
 
 #%%
 
@@ -224,8 +441,34 @@ GRU_out, hidden_out = Encoder_GRU(emb_out)
 # NB: GRU_out contains the hidden states for 1,...,T
 #      (https://discuss.pytorch.org/t/how-to-retrieve-hidden-states-for-all-time-steps-in-lstm-or-bilstm/1087/14)
 # DIM: (directions, input_sentence_length, hidden_dim)
+GRU_out.shape
 
-#%% 
+#%% Attention layer
+
+att = Attention(32)
+
+#%% Across GRU 
+
+GRU_attended = att(GRU_out)
+GRU_attended.shape
+
+#%% Sentence-level GRU
+
+Sentence_GRU = nn.GRU(64, 32, bidirectional=True)
+
+#%% Run over GRU_attended
+
+GRU_sentence, _ = Sentence_GRU(GRU_attended.unsqueeze(dim=0))
+
+#%% Sentence attention
+
+att_sentence = Attention(32)
+
+#%% Sentence attention
+
+GRU_sentence_attended = att_sentence(GRU_sentence)
+
+#%%
 
 layer1 = nn.Linear(2 * 32, 2 * 32)
 
@@ -244,12 +487,14 @@ GRU_attended = F.tanh(GRU_attended)
 #%%
 
 attention_weights = F.softmax(layer2(GRU_attended), dim=1)
+attention_weights.shape
 
 #%% Torch mul
 
 sentence = torch.mul(GRU_out, attention_weights)
 sentence = torch.sum(sentence, dim=1)
 # DIM: (batch_size, 2*hidden_dim)
+sentence.shape
 
 #%%
 
