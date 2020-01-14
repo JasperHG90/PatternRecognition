@@ -95,6 +95,7 @@ def process_batch(batch, device = "cpu"):
     # Return
     return(seq_final, seq_lens)
 
+# Function to split input data into train // test
 def split_data(X, y, seed = None, p = 0.05):
     """
     Split data into train and test
@@ -114,6 +115,104 @@ def split_data(X, y, seed = None, p = 0.05):
     val_data = [X[index] for index in test_idx]
     # Return
     return((train_data, train_label), (val_data, val_label))
+
+# Training regime for HAN model
+def train_han(X, y, model, optimizer, criterion, epochs = 10, 
+              val_split = .1, batch_size=64, device = "cpu"):
+    """
+    Train a Hierarchical Attention Network
+
+    :param X: input documents. Structured as a list of lists, where one entry is a list of input sentences.
+                all input sentences must be of the same size.
+    :param y: numpy array containing the output labels
+    :param model: a HAN model.
+    :param optimizer: optimizer used for gradient descent.
+    :param criterion: optimization criterion
+    :param epochs: number of epochs to train the model.
+    :param val_split: proportion of data points of total documents used for validation.
+    :param batch_size: size of the minibatches.
+    :param device: either one of 'cpu' or 'cuda' if GPU is available.
+
+    :return: Tuple containing:
+        1. Trained pytorch model
+        2. Training history. Dict containing 'training_loss', 'training_acc' and 'validation_acc'
+    """
+    # Number of input examples
+    n_examples = len(X)
+    # Keep track of training loss / accuracy
+    training_loss = []
+    training_acc = []
+    validation_acc = []
+    # For each epoch, train the mopdel
+    for epoch in range(0, epochs):
+        running_loss = 0.0
+        running_acc = 0.0
+        # Split data
+        batch_train, batch_val = split_data(train[0], train[1], p = val_split)
+        # Make datasets
+        batch_train_data = WikiDocData(batch_train[0], batch_train[1])
+        batch_val_data = WikiDocData(batch_val[0], batch_val[1])
+        # For each train/test example
+        for i in range(n_examples // batch_size):
+            model.train()
+            # Draw a batch
+            current_batch = batcher(batch_train_data, batch_size)
+            # Process input batches
+            #  What happens here is as follows:
+            #   (1) all first sentences go with first sentences for all docs etc.
+            #   (2) Apply packed_sequences to make variable-batch lengths
+            seqs, lens = process_batch(current_batch, device = device)
+            # GT labels
+            labels_ground_truth = torch.tensor([b[1] for b in current_batch]).to(device)
+            # Zero gradients
+            model.zero_grad()
+            # Predict output
+            predict_out = model(seqs, lens)
+            # Get max
+            predict_class = torch.argmax(predict_out, dim=1).cpu().numpy()
+            # Loss
+            loss_out = criterion(predict_out, labels_ground_truth)
+            # As item
+            loss_value = loss_out.item()
+            # GT labels to numpy
+            labels_ground_truth = labels_ground_truth.cpu().numpy()
+            acc_batch = sum(predict_class == labels_ground_truth) / labels_ground_truth.shape[0]
+            # Update loss and accuracy
+            running_loss += (loss_value - running_loss) / (i + 1)
+            running_acc += (acc_batch - running_acc) / (i + 1)
+            # Print if desired
+            if i % 5 == 0:
+                print("Loss is {} on iteration {} for epoch {} ...".format(np.round(running_loss, 3), i, epoch))
+            # Produce gradients
+            loss_out.backward()
+            # Make step
+            optimizer.step()
+        # Append loss
+        training_loss.append(running_loss)
+        training_acc.append(running_acc)
+        # On validation data
+        with torch.no_grad():
+            model.eval()
+            io = batcher(batch_val_data, len(batch_val_data.X))
+            # Process batches
+            seqs, lens = process_batch(io, device = device)
+            out = torch.argmax(model(seqs, lens), dim=1)
+        # Process true label
+        ytrue = [doc[1] for doc in io]
+        ytrue = torch.tensor(ytrue).numpy()
+        # Acc
+        val_acc = np.round(sum(out.numpy() == ytrue) / ytrue.shape[0], 3)
+        validation_acc.append(val_acc)
+        # Print
+        print("-------------")
+        print("Training Loss is {} at epoch {} ...".format(np.round(running_loss, 3), epoch))
+        print("Training accuracy is {} at epoch {} ...".format(np.round(running_acc, 3), epoch))
+        print("Validation accuracy is {} at epoch {} ...".format(val_acc, epoch))
+        print("-------------")
+
+    # Return
+    return(model, {"training_loss": training_loss, "training_acc": training_acc, "validation_acc": validation_acc})
+
 
 """
 PyTorch modules:
