@@ -247,7 +247,9 @@ test = WikiDocData(val[0], val[1])
 
 #%% Train HAN
 
-WikiHAN_out, history = train_han()
+WikiHAN_out, history = train_han(train[0], train[1], WikiHAN, optimizer, criterion,
+                                epochs = 2, val_split = 0.1, batch_size = batch_size,
+                                device = device)
 
 # %% Train model
 
@@ -267,7 +269,9 @@ def train_han(X, y, model, optimizer, criterion, epochs = 10,
     :param batch_size: size of the minibatches.
     :param device: either one of 'cpu' or 'cuda' if GPU is available.
 
-    :return: 
+    :return: Tuple containing:
+        1. Trained pytorch model
+        2. Training history. Dict containing 'training_loss', 'training_acc' and 'validation_acc'
     """
     # Number of input examples
     n_examples = len(X)
@@ -293,9 +297,9 @@ def train_han(X, y, model, optimizer, criterion, epochs = 10,
             #  What happens here is as follows:
             #   (1) all first sentences go with first sentences for all docs etc.
             #   (2) Apply packed_sequences to make variable-batch lengths
-            seqs, lens = process_batch(batch_in, device = device)
+            seqs, lens = process_batch(current_batch, device = device)
             # GT labels
-            labels_ground_truth = torch.tensor([b[1] for b in current_batch]).numpy()
+            labels_ground_truth = torch.tensor([b[1] for b in current_batch])
             # Zero gradients
             model.zero_grad()
             # Predict output
@@ -306,12 +310,14 @@ def train_han(X, y, model, optimizer, criterion, epochs = 10,
             loss_out = criterion(predict_out, labels_ground_truth)
             # As item
             loss_value = loss_out.item()
+            # GT labels to numpy
+            labels_ground_truth = labels_ground_truth.numpy()
             acc_batch = sum(predict_class == labels_ground_truth) / labels_ground_truth.shape[0]
             # Update loss and accuracy
             running_loss += (loss_value - running_loss) / (i + 1)
             running_acc += (acc_batch - running_acc) / (i + 1)
             # Print if desired
-            if i % 100 == 0:
+            if i % 5 == 0:
                 print("Loss is {} on iteration {} for epoch {} ...".format(np.round(running_loss, 3), i, epoch))
             # Produce gradients
             loss_out.backward()
@@ -342,3 +348,5 @@ def train_han(X, y, model, optimizer, criterion, epochs = 10,
 
     # Return
     return(model, {"training_loss": training_loss, "training_acc": training_acc, "validation_acc": validation_acc})
+
+# %%
