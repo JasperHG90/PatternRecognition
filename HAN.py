@@ -20,6 +20,7 @@ from torch.nn.utils.rnn import pad_packed_sequence
 from torch.nn.utils.rnn import pack_padded_sequence
 from torch.autograd import Variable
 from model_utils import Embedding_FastText
+import numpy as np
 
 """
 HAN utility functions:
@@ -72,7 +73,7 @@ def batcher(wiki_data, batch_size):
     return(batch)
 
 # Function to process a batch
-def process_batch(batch):
+def process_batch(batch, device = "cpu"):
     """
     Process a minibatch for handing off to the HAN
     """
@@ -87,7 +88,7 @@ def process_batch(batch):
         sent_lens = [len(sent) for sent in sent_seq]
         # Create numpy
         # Pad the sequence
-        sent_seq_padded = pad_sequence(sent_seq, batch_first=True, padding_value=0)
+        sent_seq_padded = pad_sequence(sent_seq, batch_first=True, padding_value=0).to(device)
         # Append
         seq_final.append(sent_seq_padded)
         seq_lens.append(sent_lens)
@@ -263,7 +264,7 @@ class HAN(nn.Module):
         self._sentence_encoder = sentence_encoder(self._hidden_size_words * 2, self._hidden_size_sent)
         # Set up a linear layer
         self._linear1 = nn.Linear(self._hidden_size_sent * 2, self._num_classes)
-    def forward(self, batch_in, return_attention_weights = False):
+    def forward(self, seqs, seq_lens, return_attention_weights = False):
         """
         :param batch_in: list of input documents of size batch_size input document with dim (sentence x seq_length)
         :param return_attention_weights: if True, return attention weights
@@ -273,8 +274,6 @@ class HAN(nn.Module):
         # Init hidden states
         #hid_state_word = self.init_hidden_word()
         #hid_state_sent 
-        # Process input batches
-        seqs, lens = process_batch(batch_in)
         # Placeholder
         batched_sentences = None
         hid_sent = None
@@ -283,14 +282,15 @@ class HAN(nn.Module):
             word_weights = []
             sentence_weights = []
         # For each, do ...
-        for seq, seq_len in zip(seqs,lens):
+        for seq, seq_len in zip(seqs,seq_lens):
             # Embedding
             embedded = self.embedding(seq)
             # Pack sequences
-            x_packed = pack_padded_sequence(embedded, seq_len, batch_first=True, enforce_sorted=False)
+            x_packed = pack_padded_sequence(embedded, seq_len, batch_first=True, 
+                                            enforce_sorted=False)
             # Word encoder
             we_out, hid_state = self._word_encoder(x_packed)
-            # Sentence encoder
+            # Cat sentences together
             if batched_sentences is None:
                 batched_sentences = we_out
             else:
