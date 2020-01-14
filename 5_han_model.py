@@ -1,6 +1,7 @@
-#%% Train the HAN
-from HAN import HAN, Embedding_FastText, WikiDocData, batcher, process_batch, split_data
-# Load pre-processed wikipedia data
+#%% This script preprocesses the wikipedia data and trains the HAN.
+# The HAN utility functions can be found in HAN.py
+
+from HAN import HAN, WikiDocData, split_data, train_han, batcher, process_batch
 import pickle
 import numpy as np
 import uuid
@@ -11,6 +12,7 @@ import torch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 from torch import optim
 import torch.nn as nn
+from sklearn import metrics
 
 # Import namespace
 from argparse import Namespace
@@ -251,102 +253,203 @@ WikiHAN_out, history = train_han(train[0], train[1], WikiHAN, optimizer, criteri
                                 epochs = 2, val_split = 0.1, batch_size = batch_size,
                                 device = device)
 
-# %% Train model
+#%% Evaluate the model on test data
 
-def train_han(X, y, model, optimizer, criterion, epochs = 10, 
-              val_split = .1, batch_size=64, device = "cpu"):
-    """
-    Train a Hierarchical Attention Network
+# For now, just make a single batch of the test data for evaluation
+valbatch = batcher(test, len(test.X))
 
-    :param X: input documents. Structured as a list of lists, where one entry is a list of input sentences.
-                all input sentences must be of the same size.
-    :param y: numpy array containing the output labels
-    :param model: a HAN model.
-    :param optimizer: optimizer used for gradient descent.
-    :param criterion: optimization criterion
-    :param epochs: number of epochs to train the model.
-    :param val_split: proportion of data points of total documents used for validation.
-    :param batch_size: size of the minibatches.
-    :param device: either one of 'cpu' or 'cuda' if GPU is available.
+# Preprocess
+seqs, lens = process_batch(valbatch, device = device)
 
-    :return: Tuple containing:
-        1. Trained pytorch model
-        2. Training history. Dict containing 'training_loss', 'training_acc' and 'validation_acc'
-    """
-    # Number of input examples
-    n_examples = len(X)
-    # Keep track of training loss / accuracy
-    training_loss = []
-    training_acc = []
-    validation_acc = []
-    # For each epoch, train the mopdel
-    for epoch in range(0, epochs):
-        running_loss = 0.0
-        running_acc = 0.0
-        # Split data
-        batch_train, batch_val = split_data(train[0], train[1], p = val_split)
-        # Make datasets
-        batch_train_data = WikiDocData(batch_train[0], batch_train[1])
-        batch_val_data = WikiDocData(batch_val[0], batch_val[1])
-        # For each train/test example
-        for i in range(n_examples // batch_size):
-            model.train()
-            # Draw a batch
-            current_batch = batcher(batch_train_data, batch_size)
-            # Process input batches
-            #  What happens here is as follows:
-            #   (1) all first sentences go with first sentences for all docs etc.
-            #   (2) Apply packed_sequences to make variable-batch lengths
-            seqs, lens = process_batch(current_batch, device = device)
-            # GT labels
-            labels_ground_truth = torch.tensor([b[1] for b in current_batch])
-            # Zero gradients
-            model.zero_grad()
-            # Predict output
-            predict_out = model(seqs, lens)
-            # Get max
-            predict_class = torch.argmax(predict_out, dim=1).cpu().numpy()
-            # Loss
-            loss_out = criterion(predict_out, labels_ground_truth)
-            # As item
-            loss_value = loss_out.item()
-            # GT labels to numpy
-            labels_ground_truth = labels_ground_truth.numpy()
-            acc_batch = sum(predict_class == labels_ground_truth) / labels_ground_truth.shape[0]
-            # Update loss and accuracy
-            running_loss += (loss_value - running_loss) / (i + 1)
-            running_acc += (acc_batch - running_acc) / (i + 1)
-            # Print if desired
-            if i % 5 == 0:
-                print("Loss is {} on iteration {} for epoch {} ...".format(np.round(running_loss, 3), i, epoch))
-            # Produce gradients
-            loss_out.backward()
-            # Make step
-            optimizer.step()
-        # Append loss
-        training_loss.append(running_loss)
-        training_acc.append(running_acc)
-        # On validation data
-        with torch.no_grad():
-            model.eval()
-            io = batcher(batch_val_data, len(batch_val_data.X))
-            # Process batches
-            seqs, lens = process_batch(io, device = device)
-            out = torch.argmax(model(seqs, lens), dim=1)
-        # Process true label
-        ytrue = [doc[1] for doc in io]
-        ytrue = torch.tensor(ytrue).numpy()
-        # Acc
-        val_acc = np.round(sum(out.numpy() == ytrue) / ytrue.shape[0], 3)
-        validation_acc.append(val_acc)
-        # Print
-        print("-------------")
-        print("Training Loss is {} at epoch {} ...".format(np.round(running_loss, 3), epoch))
-        print("Training accuracy is {} at epoch {} ...".format(np.round(running_acc, 3), epoch))
-        print("Validation accuracy is {} at epoch {} ...".format(val_acc, epoch))
-        print("-------------")
+# Predict
+with torch.no_grad():
+    WikiHAN_out.eval()
+    probs = WikiHAN_out(seqs, lens)
 
-    # Return
-    return(model, {"training_loss": training_loss, "training_acc": training_acc, "validation_acc": validation_acc})
+# %% Classes
+
+# To classes
+out = torch.argmax(probs, dim=1).numpy()
+
+# Get true label
+ytrue = [batch[1] for batch in valbatch]
+ytrue = torch.tensor(ytrue).numpy()
+
+# Accuracy
+sum(out == ytrue)/len(out)
+
+#%% Print classification report
+
+# Print classification report
+print(metrics.classification_report(ytrue, out, target_names = list(label_to_idx.keys())))
+
+# %% Get attention weights
+
+# Predict
+with torch.no_grad():
+    WikiHAN_out.eval()
+    probs, attn = WikiHAN_out(seqs, lens, return_attention_weights = True)
+
+# %% Preprocess attention weights
+
+word_weights, sent_weights = attn
+print(len(word_weights))
+print(len(sent_weights))
 
 # %%
+
+# The word-level weights (one for each sentence) are of shape:
+#  (batch_size, sentence_length, hidden_dim)
+# We can get attention weights for each of the words as follows:
+#  (1) Sum across the hidden states 
+#       This tells us how much weight is placed on the word across hidden units
+#  (2) Subset the resulting vector by the actual sentence length of each input
+#       The sentences are padded by batch size length (i.e. the length of the longest sentence)
+#       We then subset the weights for the actual sentence length
+#  (3) Normalize the weights for each of the sentences
+word_weights[0].shape
+
+# Reverse word index so it is easy to go from vectorized word ==> actual word
+idx_to_word = {v:k for k,v in word_index.items()}
+
+def word_attention(attention_vector, seq, idx_to_word):
+    """
+    Compute attention weights for each word in the sentence
+    
+    :param attention_vector: tensor of shape (sentence_length, word_hidden_dim)
+    :param seq: the vectorized sequence of words
+    :param idx_to_word: dict that maps sequence integers to words
+    
+    :return: dictionary where keys are the words in the sequence and value is the attention weight
+    """
+    # Sequence length
+    seq_len = seq.shape[0]
+    # Sum across hidden dimension (last axis)
+    attention_summed = attention_vector.sum(axis=-1)
+    # Subset
+    attention_summed = attention_summed[:seq_len]
+    # Normalize
+    attention_normed = list(np.round(attention_summed / np.sum(attention_summed), 4))
+    # Store
+    return({idx_to_word[int(seq[idx])]:attention_normed[idx] for idx in range(seq_len)})
+
+def sentence_attention(attention_vector):
+    """
+    Compute attention weights for each sentence
+
+    :param attention_vector: tensor of shape (examples, sentences, sentence_hidden_dim)
+
+    :return: dictionary where keys are sentence indices and values are sentence attention weights
+    """
+    # Create weights for each sample
+    sent_weight = attention_vector.sum(axis=-1)
+    # Normalize
+    sent_weight /= sent_weight.sum()
+    # To dict & return
+    return({k:np.round(float(list(sent_weight)[k]), 3) for k in range(0, sent_weight.shape[0])})
+
+import html
+from IPython.core.display import display, HTML
+
+# Prevent special characters like & and < to cause the browser to display something other than what you intended.
+# Taken from: https://adataanalyst.com/machine-learning/highlight-text-using-weights/
+def html_escape(text):
+    return html.escape(text)
+
+def make_word_weights(attention_weights):
+    """
+    make colored word attention weights
+
+    :param attention_weights: weights returned by 'weights_attention'
+
+    :return: returns HTML which can be plotted using: plot_word_attention_weights()
+
+    :seealso: function adapted from
+        - https://adataanalyst.com/machine-learning/highlight-text-using-weights/
+    """
+    # Maximum highligh value
+    max_alpha = 0.8 
+    highlighted_text = []
+    # For each word and weight, create the HTML
+    for word, weight in attention_weights.items():
+        if weight is not None:
+            highlighted_text.append('<span style="background-color:rgba(135,206,250,' + str(weight / max_alpha) + ');">' + html_escape(word) + '</span>')
+        else:
+            highlighted_text.append(word)
+    # Join HTML
+    highlighted_text = ' '.join(highlighted_text)
+    # return
+    return(highlighted_text)
+
+def plot_word_attention_weights(highlighted_text):
+    """
+    Given some output from 'make_word_weights()' function, plot highlighted text
+
+    :param highlighted_text: output from 'make_word_weights()'
+
+    :return: plots the highlighted text
+    """
+    display(HTML(highlighted_text))
+
+
+def plot_normed_word_weights(word_attention_vectors, sentence_attention_vectors):
+    """
+    Plot a 
+    """
+
+# %%
+
+doc_idx = 25
+sentence_idx = 10
+# Subset attention vector
+attv = word_weights[sentence_idx].numpy()
+# valbatch[example][X || y][sentence]
+seq = valbatch[doc_idx][0][sentence_idx].numpy()
+# Compute attention weights
+att_weights = word_attention(attv[doc_idx,:,:], seq, idx_to_word)
+# Print output label
+print(idx_to_label[int(valbatch[doc_idx][1].numpy())])
+print(att_weights)
+
+# %% Plot weights
+
+plot_word_attention_weights(make_word_weights(att_weights))
+
+# %%
+
+import itertools
+
+doc_idx = 29
+print(idx_to_label[int(valbatch[doc_idx][1].numpy())])
+word_weights_by_sentence = []
+word_weights_original = []
+# Get sentence attention weights
+sa = sentence_attention(sent_weights[9][doc_idx,:,:].numpy())
+# Weight the word attention weights by the sentence weights
+for sentence_idx in range(0, len(word_weights)):
+    # Subset attention vector
+    attv = word_weights[sentence_idx].numpy()
+    # Get the vectorized sequence ('sentence')
+    seq = valbatch[doc_idx][0][sentence_idx].numpy()
+    # Compute the attention weights
+    att_weights = word_attention(attv[doc_idx,:,:], seq, idx_to_word)
+    word_weights_original.append(att_weights)
+    # Weight by sentence weight
+    att_weights = {k:v*sa[sentence_idx] for k,v in att_weights.items()}
+    # Push
+    word_weights_by_sentence.append(att_weights)
+
+# Norm weights over all words in the document
+sum_total = sum(itertools.chain(*[list(weights.values()) for weights in word_weights_by_sentence]))
+normed_weights = []
+for weight in word_weights_by_sentence:
+    normed_weights.append({k:v/sum_total for k,v in weight.items()})
+
+# %% Highlight text in each sentence and concatenate
+
+ww = [make_word_weights(weight) for weight in normed_weights]
+plot_word_attention_weights(".<br>".join(ww))
+
+# %%
+
+# Idea: check for each class how important e.g. the first sentence is.
