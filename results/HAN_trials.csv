@@ -1,0 +1,6 @@
+params,train_loss,train_accuracy,iteration,val_accuracy,val_loss,val_f1,val_precision,val_recall
+"{'hidden_size': 128, 'learning_rate': 0.0028654456195097234, 'sent_length': 12, 'use_class_weights': False}",1.6992,0.8449,9,0.836,1.709,0.775,0.8361,0.7979
+"{'hidden_size': 128, 'learning_rate': 0.0020108104286232706, 'sent_length': 12, 'use_class_weights': False}",1.8178,0.7241,9,0.734,1.8088,0.596,0.7342,0.6499
+"{'hidden_size': 64, 'learning_rate': 0.001320137670134248, 'sent_length': 12, 'use_class_weights': False}",1.7142,0.8307,9,0.813,1.7315,0.7338,0.813,0.7663
+"{'hidden_size': 32, 'learning_rate': 0.0028812526111546962, 'sent_length': 10, 'use_class_weights': False}",1.6955,0.8491,9,0.84,1.704,0.7498,0.8403,0.7895
+"{'hidden_size': 64, 'learning_rate': 0.00490585231391209, 'sent_length': 8, 'use_class_weights': False}",1.6922,0.851,9,0.834,1.7063,0.7471,0.834,0.7846
