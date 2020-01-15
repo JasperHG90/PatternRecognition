@@ -39,7 +39,7 @@ args = Namespace(
 #%% Load pre-processed data
 with open("data/WikiEssentials_L4_P3_preprocessed.pickle", "rb") as inFile:
     input_data = pickle.load(inFile)
-    
+
 # Process each
 train_x = []
 train_y = []
@@ -101,7 +101,7 @@ zerovar_words
 # Save embeddings
 with open("embeddings/prep.pickle", 'wb') as handle:
   pickle.dump(FTEMB,  handle, protocol=pickle.HIGHEST_PROTOCOL)
-  
+
 #%% Load pre-processed embeddings
 with open("embeddings/prep.pickle", "rb") as inFile:
     FTEMB = pickle.load(inFile)
@@ -151,7 +151,7 @@ VitalArticles = WikiData(train, np.array(train_y))
 trainx, test = split(VitalArticles, val_prop = .05, seed = 856)
 
 # Class weights
-# Preprocess outcome label 
+# Preprocess outcome label
 train_y_ohe = np.zeros((len(train_y), len(input_data.keys())))
 for idx,lbl in enumerate(train_y):
   train_y_ohe[idx, lbl] = 1
@@ -179,7 +179,7 @@ from sklearn import metrics
 def baselineNN_search(parameters):
   """Set up, run and evaluate a baseline neural network"""
   # Split into train/test set
-  train_current, test_current = split(trainx, val_prop = .05) 
+  train_current, test_current = split(trainx, val_prop = .05)
   # CV with skorch
   net = NeuralNet(
     # Module
@@ -222,15 +222,15 @@ def baselineNN_search(parameters):
   # Get accuracy
   acc_test = np.round((ytrue == yhatc).sum() / yhatc.size, 4)
   # Prec/rec/f1
-  out_metrics = metrics.precision_recall_fscore_support(ytrue, 
-                                                        yhatc, 
+  out_metrics = metrics.precision_recall_fscore_support(ytrue,
+                                                        yhatc,
                                                         average = "weighted")
   # Write to file
   with open(args.out_file, 'a') as of_connection:
     writer = csv.writer(of_connection)
-    writer.writerow([parameters, np.round(train_loss[which_min], 4), 
-                     np.round(val_loss[which_min], 4), which_min, 
-                     np.round(acc_test, 4), np.round(out_metrics[0], 4), 
+    writer.writerow([parameters, np.round(train_loss[which_min], 4),
+                     np.round(val_loss[which_min], 4), which_min,
+                     np.round(acc_test, 4), np.round(out_metrics[0], 4),
                      np.round(out_metrics[1], 4), np.round(out_metrics[2], 4)])
   # Return cross-validation loss
   return({"loss": val_loss[which_min], "parameters": parameters, "iteration": which_min, 'status':STATUS_OK})
@@ -244,7 +244,7 @@ space = {
     'learning_rate': hp.loguniform('learning_rate', np.log(0.001), np.log(0.02))
 }
 
-# Test if works  
+# Test if works
 from hyperopt.pyll.stochastic import sample
 parameters = sample(space)
 po = baselineNN_search(parameters)
@@ -261,9 +261,9 @@ with open(args.out_file, 'w') as of_connection:
   writer.writerow(['params', 'train_loss', 'val_loss', 'iteration', 'test_accuracy', "test_f1", "test_precision", "test_recall"])
 
 # Optimize
-best = fmin(fn = baselineNN_search, space = space, algo = tpe.suggest, 
+best = fmin(fn = baselineNN_search, space = space, algo = tpe.suggest,
             max_evals = args.max_evals, trials = bayes_trials)
-  
+
 # Run the model with the best paramaters
 net = NeuralNet(
     # Module
@@ -299,7 +299,7 @@ yhat = net.predict(test)
 yhatc = yhat.argmax(axis=1)
 ytrue = test.y
 (ytrue == yhatc).sum() / yhatc.size
-  
+
 # Classification report
 from sklearn import metrics
 print(metrics.classification_report(ytrue, yhatc, target_names=list(catmap.values())))
