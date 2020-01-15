@@ -24,7 +24,7 @@ args = Namespace(
   # Number of times to evaluate bayesian search for hyperparams
   max_evals = 500,
   # Size of the vocabulary
-  input_vocabulary_size = 15000,
+  input_vocabulary_size = 20000,
   # Embedding size
   embedding_dim = 300,
   # Max length of text sequences

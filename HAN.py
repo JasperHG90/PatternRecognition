@@ -145,10 +145,11 @@ def train_han(X, y, model, optimizer, criterion, epochs = 10,
     validation_acc = []
     # For each epoch, train the mopdel
     for epoch in range(0, epochs):
+        epoch += 1
         running_loss = 0.0
         running_acc = 0.0
         # Split data
-        batch_train, batch_val = split_data(train[0], train[1], p = val_split)
+        batch_train, batch_val = split_data(X, y, p = val_split)
         # Make datasets
         batch_train_data = WikiDocData(batch_train[0], batch_train[1])
         batch_val_data = WikiDocData(batch_val[0], batch_val[1])

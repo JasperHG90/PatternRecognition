@@ -48,7 +48,7 @@ if not os.path.exists("data/HAN_wiki_preprocessed.pickle"):
     failed = []
     previous_docnr = "default"
     # Max sentence length
-    MAX_SENT_LENGTH = 10
+    MAX_SENT_LENGTH = 8
     #stop = 100
     with open(path_to_file, "r", encoding="utf8") as inFile:
         # Counter for the number of sentences processed
@@ -235,7 +235,7 @@ num_classes = len(np.unique(labels_vect))
 WikiHAN = HAN(FTEMB, hidden_size, hidden_size, batch_size, num_classes)
 
 # Set up optimizer
-optimizer = optim.Adam(WikiHAN.parameters(), lr = 0.005)
+optimizer = optim.Adam(WikiHAN.parameters(), lr = 0.004)
 
 # Criterion
 criterion = nn.CrossEntropyLoss(weight=cw)
@@ -250,7 +250,7 @@ test = WikiDocData(val[0], val[1])
 #%% Train HAN
 
 WikiHAN_out, history = train_han(train[0], train[1], WikiHAN, optimizer, criterion,
-                                epochs = 2, val_split = 0.1, batch_size = batch_size,
+                                epochs = 5, val_split = 0.1, batch_size = batch_size,
                                 device = device)
 
 #%% Evaluate the model on test data
@@ -400,7 +400,7 @@ def plot_normed_word_weights(word_attention_vectors, sentence_attention_vectors)
 # %%
 
 doc_idx = 25
-sentence_idx = 10
+sentence_idx =7
 # Subset attention vector
 attv = word_weights[sentence_idx].numpy()
 # valbatch[example][X || y][sentence]
@@ -419,12 +419,12 @@ plot_word_attention_weights(make_word_weights(att_weights))
 
 import itertools
 
-doc_idx = 29
+doc_idx = 3
 print(idx_to_label[int(valbatch[doc_idx][1].numpy())])
 word_weights_by_sentence = []
 word_weights_original = []
 # Get sentence attention weights
-sa = sentence_attention(sent_weights[9][doc_idx,:,:].numpy())
+sa = sentence_attention(sent_weights[7][doc_idx,:,:].numpy())
 # Weight the word attention weights by the sentence weights
 for sentence_idx in range(0, len(word_weights)):
     # Subset attention vector
@@ -452,4 +452,11 @@ plot_word_attention_weights(".<br>".join(ww))
 
 # %%
 
+sa
+
 # Idea: check for each class how important e.g. the first sentence is.
+
+# %%
+
+
+# %%
