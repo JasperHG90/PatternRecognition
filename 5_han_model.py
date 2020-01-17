@@ -306,7 +306,7 @@ def HAN_search(parameters):
                                    epochs=10, val_split=0.1, batch_size=batch_size,
                                    device=device)
   # Max accuracy
-  which_min = int(np.min(history["validation_loss"]))
+  which_min = int(np.argmin(history["validation_loss"]))
   # Write to file
   with open(args.out_file, 'a') as of_connection:
     writer = csv.writer(of_connection)
@@ -354,7 +354,7 @@ with open(args.out_file, 'w') as of_connection:
 
 # Optimize
 best = fmin(fn = HAN_search, space = space, algo = tpe.suggest,
-            max_evals = 5, trials = bayes_trials)
+            max_evals = args.max_evals, trials = bayes_trials)
 
 #%% Train HAN
 
