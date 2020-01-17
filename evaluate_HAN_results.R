@@ -72,8 +72,12 @@ ggplot(hparams_processed %>% group_by(hidden_size) %>%
   geom_bar(stat = "identity")
 # Model clearly favours larger architecture
 
+ggplot(hparams_processed %>% group_by(sent_length) %>%
+         tally(), aes(x=sent_length, y=n)) +
+  geom_bar(stat = "identity")
+
 ggplot(hparams_processed, aes(x=learning_rate, y = loss)) +
   geom_point() +
   geom_smooth()
-# Anything beyond 0.002 is a waste of time basically.
+
 

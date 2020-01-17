@@ -158,7 +158,7 @@ for idx,lbl in enumerate(train_y):
 # These weights are unnormalized but that's what pytorch is expecting
 cw = torch.tensor(np.max(np.sum(train_y_ohe, axis=0)) / (np.sum(train_y_ohe, axis=0))).type(torch.float).to(device)
 
-### Use hyperopt (Bayesian hyperparameter optimization) to search for good hyperparams
+#%% Use hyperopt (Bayesian hyperparameter optimization) to search for good hyperparams
 
 from hyperopt import STATUS_OK
 import csv
@@ -263,6 +263,11 @@ with open(args.out_file, 'w') as of_connection:
 # Optimize
 best = fmin(fn = baselineNN_search, space = space, algo = tpe.suggest,
             max_evals = args.max_evals, trials = bayes_trials)
+
+#%%
+
+from skorch import NeuralNet
+from skorch.dataset import CVSplit
 
 # Run the model with the best paramaters
 net = NeuralNet(

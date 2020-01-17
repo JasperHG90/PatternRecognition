@@ -19,9 +19,12 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.nn.utils.rnn import pad_packed_sequence
 from torch.nn.utils.rnn import pack_padded_sequence
 from torch.autograd import Variable
-from model_utils import Embedding_FastText
 import numpy as np
 from sklearn import metrics
+# This is a technical thing
+# See stackoverflow:
+#   - PyTorch: training with GPU gives worse error than training the same thing with CPU
+torch.backends.cudnn.enabled = False
 
 """
 HAN utility functions:
@@ -29,6 +32,11 @@ HAN utility functions:
     steps and dataset construction are a little different from the other models. The preprocessing 
     functions are as follows:
         1. Embedding_FastText: creates a Pytorch embedding layer from pre-trained weights
+        2. WikiDocData: Pytorch Dataset used to store & retrieve wikipedia data.
+        3. batcher: function that creates minibatches for training
+        4. process_batch: processes a minibatch of wikipedia articles.
+        5. split_data: function that splits wikipedia data into train & test
+        6. train_han: training regime for the HAN.
 """
 
 # Create FastText embedding for PyTorch
@@ -83,7 +91,8 @@ def process_batch(batch, device = "cpu"):
     # Place the first sentences for each doc in one list, second sentences also etc.
     seq_final = []
     seq_lens = []
-    # Pad documents with fewer sentences than the maximum number
+    # Pad documents with fewer sentences than the maximum number of sequences
+    # This allows training of documents of different size
     for j in range(len(batch)):
         if len(batch[j][0]) < doc_len:
             batch[j] = (batch[j][0] + (doc_len - len(batch[j][0])) * [torch.tensor([0]).type(torch.long)], batch[j][1])
