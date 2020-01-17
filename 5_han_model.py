@@ -46,7 +46,7 @@ path_to_file = os.path.join(args.data_dir, args.data_prefix + ".txt")
 #%% Preprocess the input data
 
 # Max sentence length
-MAX_SENT_LENGTH = 15
+MAX_SENT_LENGTH = 10
 
 if not os.path.exists("data/HAN_wiki_preprocessed_S{}.pickle".format(MAX_SENT_LENGTH)):
     # Load data
@@ -251,11 +251,11 @@ train, val = split_data(docs_vectorized, labels_vect, 6754, p=0.05)
 # Make dataset
 test = WikiDocData(val[0], val[1])
 
-#%% Use hyperopt (Bayesian hyperparameter optimization) to search for good hyperparams
-
 # Global settings
 batch_size = 128
 num_classes = len(np.unique(labels_vect))
+
+#%% Use hyperopt (Bayesian hyperparameter optimization) to search for good hyperparams
 
 from hyperopt import STATUS_OK
 import csv
@@ -358,8 +358,50 @@ best = fmin(fn = HAN_search, space = space, algo = tpe.suggest,
 
 #%% Train HAN
 
+max_sent_length = 10
+
+# Load data for the sentence length
+sent_length = max_sent_length
+with open("tokenizers/tokenizer_S{}.pickle".format(sent_length), "rb") as inFile:
+    tokenizer = pickle.load(inFile)
+with open("embeddings/HAN_embeddings_S{}.pickle".format(sent_length), "rb") as inFile:
+    FTEMB = torch.tensor(pickle.load(inFile)).to(device)
+with open("tokenizers/data_S{}.pickle".format(sent_length), "rb") as inFile:
+    data = pickle.load(inFile)
+# Unpack
+docs_vectorized = data["docs_vectorized"]
+labels_vect = data["labels_vectorized"]
+idx_to_label = data["idx_to_label"]
+label_to_idx = data["labels_to_idx"]
+
+best = Namespace(
+    hidden_size = 64,
+    use_class_weights = True,
+    batch_size = 128,
+    num_classes = len(np.unique(labels_vect)),
+    learning_rate = 0.01105,
+    epochs = 6
+)
+
+# Split
+train, val = split_data(docs_vectorized, labels_vect, 6754, p=0.05)
+# Make dataset
+test = WikiDocData(val[0], val[1])
+# Set up the model
+WikiHAN = HAN(FTEMB, best.hidden_size, best.hidden_size, best.batch_size, best.num_classes)
+# To cuda
+WikiHAN.to(device)
+# Set up optimizer
+optimizer = optim.Adam(WikiHAN.parameters(), lr= best.learning_rate)
+# Criterion
+if best.use_class_weights:
+    criterion = nn.CrossEntropyLoss(weight=cw)
+else:
+    criterion = nn.CrossEntropyLoss()
+
+# Training routine
 WikiHAN_out, history = train_han(train[0], train[1], WikiHAN, optimizer, criterion,
-                                epochs = 5, val_split = 0.1, batch_size = batch_size,
+                                epochs = best.epochs, val_split = 0.1, batch_size = best.batch_size,
                                 device = device)
 
 #%% Evaluate the model on test data
@@ -391,6 +433,10 @@ print(sum(out == ytrue)/len(out))
 
 # Print classification report
 print(metrics.classification_report(ytrue, out, target_names = list(label_to_idx.keys())))
+
+#%% Save model
+
+torch.save(WikiHAN_out.state_dict(), "models/HAN.pt")
 
 # %% Get attention weights
 
@@ -520,6 +566,7 @@ seq = valbatch[doc_idx][0][sentence_idx].numpy()
 att_weights = word_attention(attv[doc_idx,:,:], seq, idx_to_word)
 # Print output label
 print(idx_to_label[int(valbatch[doc_idx][1].numpy())])
+print(idx_to_label[int(out[doc_idx])])
 print(att_weights)
 
 # %% Plot weights
@@ -535,7 +582,7 @@ print(idx_to_label[int(valbatch[doc_idx][1].numpy())])
 word_weights_by_sentence = []
 word_weights_original = []
 # Get sentence attention weights
-sa = sentence_attention(sent_weights[7][doc_idx,:,:].numpy())
+sa = sentence_attention(sent_weights[9][doc_idx,:,:].numpy())
 # Weight the word attention weights by the sentence weights
 for sentence_idx in range(0, len(word_weights)):
     # Subset attention vector

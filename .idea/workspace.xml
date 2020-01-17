@@ -3,9 +3,11 @@
   <component name="ChangeListManager">
     <list default="true" id="aa9f6f31-d7bf-494e-8d78-060984a7cdc0" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/2_baseline_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/2_baseline_model.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/5_han_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/5_han_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluate_results.R" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/results/HAN_trials.csv" beforeDir="false" afterPath="$PROJECT_DIR$/results/HAN_trials.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/HAN.py" beforeDir="false" afterPath="$PROJECT_DIR$/HAN.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/embeddings/prep.pickle" beforeDir="false" afterPath="$PROJECT_DIR$/embeddings/prep.pickle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluate_HAN_results.R" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate_HAN_results.R" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -14,12 +16,12 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="FileEditorManager">
-    <leaf>
-      <file pinned="false" current-in-tab="true">
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/5_han_model.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="355">
-              <caret line="358" selection-start-line="358" selection-end-line="358" />
+            <state relative-caret-position="149">
+              <caret line="440" selection-start-line="440" selection-end-line="440" />
               <folding>
                 <element signature="e#120#199#0" expanded="true" />
               </folding>
@@ -30,11 +32,20 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/HAN.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="845">
-              <caret line="260" selection-start-line="260" selection-end-line="260" />
+            <state relative-caret-position="-961">
+              <caret line="259" column="49" selection-start-line="259" selection-start-column="49" selection-end-line="259" selection-end-column="49" />
               <folding>
                 <element signature="e#548#560#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/2_baseline_model.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="4777">
+              <caret line="285" column="24" lean-forward="true" selection-start-line="285" selection-start-column="24" selection-end-line="285" selection-end-column="24" />
             </state>
           </provider>
         </entry>
@@ -55,20 +66,20 @@
       <list>
         <option value="$PROJECT_DIR$/HAN.py" />
         <option value="$PROJECT_DIR$/5_han_model.py" />
+        <option value="$PROJECT_DIR$/2_baseline_model.py" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-6" />
-    <option name="width" value="1296" />
-    <option name="height" value="1047" />
+    <option name="x" value="-9" />
+    <option name="width" value="1944" />
+    <option name="height" value="1571" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -76,30 +87,11 @@
               <item name="PatternRecognition" type="b2602c69:ProjectViewProjectNode" />
               <item name="PatternRecognition" type="462c0819:PsiDirectoryNode" />
             </path>
-            <path>
-              <item name="PatternRecognition" type="b2602c69:ProjectViewProjectNode" />
-              <item name="PatternRecognition" type="462c0819:PsiDirectoryNode" />
-              <item name="data" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="PatternRecognition" type="b2602c69:ProjectViewProjectNode" />
-              <item name="PatternRecognition" type="462c0819:PsiDirectoryNode" />
-              <item name="embeddings" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="PatternRecognition" type="b2602c69:ProjectViewProjectNode" />
-              <item name="PatternRecognition" type="462c0819:PsiDirectoryNode" />
-              <item name="results" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="PatternRecognition" type="b2602c69:ProjectViewProjectNode" />
-              <item name="PatternRecognition" type="462c0819:PsiDirectoryNode" />
-              <item name="tokenizers" type="462c0819:PsiDirectoryNode" />
-            </path>
           </expand>
           <select />
         </subPane>
       </pane>
+      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -163,24 +155,19 @@
       <option name="presentableId" value="Default" />
       <updated>1579105510508</updated>
       <workItem from="1579105514591" duration="20078000" />
+      <workItem from="1579255424036" duration="9334000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="20078000" />
+    <option name="totallyTimeSpent" value="29412000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-8" y="-8" width="2576" height="1056" extended-state="6" />
+    <frame x="-7" y="-7" width="1295" height="695" extended-state="6" />
     <layout>
-      <window_info id="Favorites" side_tool="true" />
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.10969793" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.16895716" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
-      <window_info anchor="bottom" id="Docker" show_stripe_button="false" />
-      <window_info anchor="bottom" id="Database Changes" />
-      <window_info anchor="bottom" id="Version Control" />
-      <window_info active="true" anchor="bottom" id="Python Console" visible="true" />
-      <window_info anchor="bottom" id="Terminal" />
-      <window_info anchor="bottom" id="Event Log" side_tool="true" />
+      <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.3288889" />
       <window_info anchor="bottom" id="Run" order="2" />
@@ -188,54 +175,72 @@
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" />
-      <window_info anchor="right" id="Database" />
-      <window_info anchor="right" id="R Packages" />
-      <window_info anchor="right" x="0" y="0" width="594" height="856" id="Documentation" side_tool="true" visible="true" weight="0.033386327" />
-      <window_info anchor="right" id="SciView" />
-      <window_info anchor="right" id="R Graphics" />
+      <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Version Control" order="8" />
+      <window_info anchor="bottom" id="Database Changes" order="9" />
+      <window_info anchor="bottom" id="Event Log" order="10" side_tool="true" />
+      <window_info anchor="bottom" id="Terminal" order="11" />
+      <window_info active="true" anchor="bottom" id="Python Console" order="12" visible="true" weight="0.2883549" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="right" id="SciView" order="3" />
+      <window_info anchor="right" id="R Graphics" order="4" />
+      <window_info anchor="right" id="R Packages" order="5" />
+      <window_info anchor="right" x="0" y="0" width="594" height="856" id="Documentation" order="6" side_tool="true" visible="true" weight="0.06790622" />
+      <window_info anchor="right" id="Database" order="7" />
     </layout>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/3_cnn_model.py">
+    <entry file="file://$PROJECT_DIR$/results/HAN_trials.csv">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-3315" />
+        <state relative-caret-position="-9479" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/2_baseline_model.py">
+    <entry file="file://$PROJECT_DIR$/3_cnn_model.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1555">
-          <caret line="265" selection-start-line="265" selection-end-line="265" />
+        <state relative-caret-position="-5789" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/results/basicNN_trials.csv">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-16014" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/results/convNN_trials.csv">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-6494">
+          <caret line="191" lean-forward="true" selection-start-line="191" selection-end-line="191" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/HAN.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="845">
-          <caret line="260" selection-start-line="260" selection-end-line="260" />
+        <state relative-caret-position="-961">
+          <caret line="259" column="49" selection-start-line="259" selection-start-column="49" selection-end-line="259" selection-end-column="49" />
           <folding>
             <element signature="e#548#560#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/results/HAN_trials.csv">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-9479" />
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/5_han_model.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="355">
-          <caret line="358" selection-start-line="358" selection-end-line="358" />
+        <state relative-caret-position="149">
+          <caret line="440" selection-start-line="440" selection-end-line="440" />
           <folding>
             <element signature="e#120#199#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/2_baseline_model.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="4777">
+          <caret line="285" column="24" lean-forward="true" selection-start-line="285" selection-start-column="24" selection-end-line="285" selection-end-column="24" />
         </state>
       </provider>
     </entry>
