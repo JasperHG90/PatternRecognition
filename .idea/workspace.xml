@@ -2,18 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="aa9f6f31-d7bf-494e-8d78-060984a7cdc0" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/PatternRecognition.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/R_User_Library.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/other.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/2_baseline_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/2_baseline_model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/5_han_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/5_han_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/HAN.py" beforeDir="false" afterPath="$PROJECT_DIR$/HAN.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/HAN_wiki_preprocessed.pickle" beforeDir="false" afterPath="$PROJECT_DIR$/data/HAN_wiki_preprocessed_S8.pickle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/embeddings/HAN_embeddings.pickle" beforeDir="false" afterPath="$PROJECT_DIR$/embeddings/HAN_embeddings_S8.pickle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/model_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluate_results.R" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/results/HAN_trials.csv" beforeDir="false" afterPath="$PROJECT_DIR$/results/HAN_trials.csv" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -26,8 +18,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/5_han_model.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="318">
-              <caret line="308" column="14" selection-start-line="308" selection-start-column="14" selection-end-line="308" selection-end-column="14" />
+            <state relative-caret-position="355">
+              <caret line="358" selection-start-line="358" selection-end-line="358" />
               <folding>
                 <element signature="e#120#199#0" expanded="true" />
               </folding>
@@ -170,16 +162,15 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1579105510508</updated>
-      <workItem from="1579105514591" duration="15325000" />
+      <workItem from="1579105514591" duration="20078000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="15325000" />
+    <option name="totallyTimeSpent" value="20078000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="2576" height="1056" extended-state="6" />
-    <editor active="true" />
     <layout>
       <window_info id="Favorites" side_tool="true" />
       <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.10969793" />
@@ -191,7 +182,7 @@
       <window_info anchor="bottom" id="Terminal" />
       <window_info anchor="bottom" id="Event Log" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
-      <window_info anchor="bottom" id="Find" order="1" weight="0.32996634" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.3288889" />
       <window_info anchor="bottom" id="Run" order="2" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
@@ -216,9 +207,6 @@
         <state relative-caret-position="-3315" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/results/HAN_trials.csv">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
     <entry file="file://$PROJECT_DIR$/2_baseline_model.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1555">
@@ -236,10 +224,15 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/results/HAN_trials.csv">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-9479" />
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/5_han_model.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="318">
-          <caret line="308" column="14" selection-start-line="308" selection-start-column="14" selection-end-line="308" selection-end-column="14" />
+        <state relative-caret-position="355">
+          <caret line="358" selection-start-line="358" selection-end-line="358" />
           <folding>
             <element signature="e#120#199#0" expanded="true" />
           </folding>
