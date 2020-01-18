@@ -39,7 +39,7 @@ vignettes/*.pdf
 .Renviron
 
 # Wikipedia data (unzipped)
-data/WikiEssentials_L4.txt
+data/raw/WikiEssentials_L4.txt
 
 # Ignore embeddings
 embeddings/*.vec
