@@ -4,10 +4,7 @@
 from HAN import HAN, WikiDocData, split_data, train_han, batcher, process_batch
 import pickle
 import numpy as np
-import uuid
 import os
-import syntok.segmenter as segmenter
-from tqdm import tqdm
 import torch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 from torch import optim
@@ -24,53 +21,75 @@ from preprocess_utils import tokenize_text
 import os
 import pickle
 
-# Set up namespace
+# Base directory
+bd = "data/HAN"
+# Create a map for the different sentence lengths
+slmap = {}
+for sl in ["S8", "S10", "S12", "S15"]:
+    idx=int(sl.strip("S"))
+    slmap[idx] = {"tokenizer": os.path.join(bd, "tokenizer_{}.pickle".format(sl)),
+                 "embedding": os.path.join(bd, "HAN_embeddings_{}.pickle".format(sl)),
+                 "input_data": os.path.join(bd, "data_{}.pickle".format(sl))}
+
+# Model settings
 args = Namespace(
+    # Tokenizer
+    data_files_map=slmap,
     # File to save results
-    out_file='results/HAN_trials.csv',
+    out_file='results/basicNN_trials.csv',
     # Number of times to evaluate bayesian search for hyperparams
-    max_evals=500,
-    # Input data settings
-    data_dir = "data",
-    data_prefix = "WikiEssentials_L4",
-    # Preprocessing settings
-    token_lower = False,
-    token_remove_digits = True,
-    # Tokenizer etc.
-    max_vocab_size = 20000
+    # NB: the HAN is very expensive to run even on a GPU
+    max_evals=300,
+    # Embedding size
+    embedding_dim=300,
+    # NN settings
+    embedding_trainable=False,
+    # Batch size
+    batch_size=128
 )
 
-# Run preprocess function
-path_to_file = os.path.join(args.data_dir, args.data_prefix + ".txt")
+#%% Load the data for one of the sentence lengths
+
+sent_length = 10
+
+# Load
+with open(args.data_files_map[sent_length]["tokenizer"], "rb") as inFile:
+    tokenizer = pickle.load(inFile)
+with open(args.data_files_map[sent_length]["embedding"], "rb") as inFile:
+    FTEMB = torch.tensor(pickle.load(inFile)).to(device)
+with open(args.data_files_map[sent_length]["input_data"], "rb") as inFile:
+    data = pickle.load(inFile)
+# Unpack
+train_x, train_y = data["train_x"], data["train_y"]
+labels_vect = data["labels_vectorized"]
+idx_to_label = data["idx_to_label"]
+label_to_idx = data["labels_to_idx"]
 
 #%% View the max length of all sentences in all documents
 
 # Max length of the sentences
 # (itertools.chain(*X)) makes list of lists into one, flat list
-max_seq_len = max([len(seq) for seq in itertools.chain(*docs_vectorized)])
+max_seq_len = max([len(seq) for seq in itertools.chain(*train_x)])
 
 # Max length of documents (shoudl all be the same)
-max_seq_doc = max([len(doc) for doc in docs_vectorized])
+max_seq_doc = max([len(doc) for doc in train_x])
 
 # View
 print((max_seq_len))
 print((max_seq_doc))
 
-#%% Class weights
+#%% Class weights (these are the same for each)
 
-cw = [len(v) for k,v in inputs.items()]
-cw = np.max(cw) / cw
-cw = torch.tensor(cw).type(torch.float).to(device)
+# Class weights
+# Preprocess outcome label
+train_y_ohe = np.zeros((len(train_y), len(data["labels_to_idx"])))
+for idx,lbl in enumerate(train_y):
+  train_y_ohe[idx, lbl] = 1
+# These weights are unnormalized but that's what pytorch is expecting
+cw = torch.tensor(np.max(np.sum(train_y_ohe, axis=0)) / (np.sum(train_y_ohe, axis=0))).type(torch.float).to(device)
 
-#%% Prepare train /test data
+#%% Unique classes
 
-# Create batched data
-train, val = split_data(docs_vectorized, labels_vect, 6754, p=0.05)
-# Make dataset
-test = WikiDocData(val[0], val[1])
-
-# Global settings
-batch_size = 128
 num_classes = len(np.unique(labels_vect))
 
 #%% Use hyperopt (Bayesian hyperparameter optimization) to search for good hyperparams
@@ -92,61 +111,65 @@ from sklearn import metrics
 
 # Function that sets up model and outputs and returns validation loss
 def HAN_search(parameters):
-  """Set up, run and evaluate a HAN"""
-  # Based on the parameters, load various settings
-  sent_length = parameters["sent_length"]
-  with open("tokenizers/tokenizer_S{}.pickle".format(sent_length), "rb") as inFile:
-      tokenizer = pickle.load(inFile)
-  with open("embeddings/HAN_embeddings_S{}.pickle".format(sent_length), "rb") as inFile:
-      FTEMB = torch.tensor(pickle.load(inFile)).to(device)
-  with open("tokenizers/data_S{}.pickle".format(sent_length), "rb") as inFile:
-      data = pickle.load(inFile)
-  # Unpack
-  docs_vectorized = data["docs_vectorized"]
-  labels_vect = data["labels_vectorized"]
-  idx_to_label = data["idx_to_label"]
-  label_to_idx = data["labels_to_idx"]
-  # We split data, always at the same seed so the *same* data is removed from the training set
-  train, val = split_data(docs_vectorized, labels_vect, 6754, p=0.05)
-  # Set up the model
-  WikiHAN = HAN(FTEMB, parameters["hidden_size"], parameters["hidden_size"], batch_size, num_classes)
-  # To cuda
-  WikiHAN.to(device)
-  # Set up optimizer
-  optimizer = optim.Adam(WikiHAN.parameters(), lr=parameters["learning_rate"])
-  # Criterion
-  if parameters["use_class_weights"]:
+    """Set up, run and evaluate a HAN"""
+    # Based on the parameters, load various settings
+    sent_length = parameters["sent_length"]
+    # Load data
+    with open(args.data_files_map[sent_length]["tokenizer"], "rb") as inFile:
+        tokenizer = pickle.load(inFile)
+    with open(args.data_files_map[sent_length]["embedding"], "rb") as inFile:
+        FTEMB = torch.tensor(pickle.load(inFile)).to(device)
+    with open(args.data_files_map[sent_length]["input_data"], "rb") as inFile:
+        data = pickle.load(inFile)
+    # Unpack
+    train_x, train_y = data["train_x"], data["train_y"]
+    labels_vect = data["labels_vectorized"]
+    idx_to_label = data["idx_to_label"]
+    label_to_idx = data["labels_to_idx"]
+    # Set up the model
+    WikiHAN = HAN(FTEMB,
+                  parameters["hidden_size"],
+                  parameters["hidden_size"],
+                  args.batch_size,
+                  num_classes,
+                  dropout_prop=parameters["dropout_prop"])
+    # To cuda
+    WikiHAN.to(device)
+    # Set up optimizer
+    optimizer = optim.Adam(WikiHAN.parameters(), lr=parameters["learning_rate"])
+    # Criterion
+    if parameters["use_class_weights"]:
       criterion = nn.CrossEntropyLoss(weight=cw)
-  else:
+    else:
       criterion = nn.CrossEntropyLoss()
-  # Run the model
-  WikiHAN_out, history = train_han(train[0], train[1], WikiHAN, optimizer, criterion,
-                                   epochs=10, val_split=0.1, batch_size=batch_size,
+    # Run the model
+    WikiHAN_out, history = train_han(train_x, train_y, WikiHAN, optimizer, criterion,
+                                   epochs=10, val_split=0.1, batch_size=args.batch_size,
                                    device=device)
-  # Max accuracy
-  which_min = int(np.argmin(history["validation_loss"]))
-  # Write to file
-  with open(args.out_file, 'a') as of_connection:
-    writer = csv.writer(of_connection)
-    writer.writerow([parameters,
-                     np.round(history["training_loss"][which_min], 4),
-                     np.round(history["training_accuracy"][which_min], 4),
-                     which_min,
-                     np.round(history["validation_accuracy"][which_min], 4),
-                     np.round(history["validation_loss"][which_min], 4),
-                     np.round(history["validation_f1"][which_min], 4),
-                     np.round(history["validation_precision"][which_min], 4),
-                     np.round(history["validation_recall"][which_min], 4)])
-  # Return cross-validation loss
-  # NB: we are minimizing here zo we need to take 1-accuracy
-  return({"loss": history["validation_loss"][which_min], "parameters": parameters, "iteration": which_min, 'status':STATUS_OK})
+    # Max accuracy
+    which_min = int(np.argmin(history["validation_loss"]))
+    # Write to file
+    with open(args.out_file, 'a') as of_connection:
+        writer = csv.writer(of_connection)
+        writer.writerow([parameters,
+                         which_min,
+                         np.round(history["training_loss"][which_min], 4),
+                         np.round(history["validation_accuracy"][which_min], 4),
+                         np.round(history["validation_loss"][which_min], 4),
+                         np.round(history["validation_f1"][which_min], 4),
+                         np.round(history["validation_precision"][which_min], 4),
+                         np.round(history["validation_recall"][which_min], 4)])
+    # Return cross-validation loss
+    # NB: we are minimizing here zo we need to take 1-accuracy
+    return({"loss": history["validation_loss"][which_min], "parameters": parameters, "iteration": which_min, 'status':STATUS_OK})
 
 # Define the search space
 space = {
     'hidden_size': hp.choice('hidden_units', [32,64,128]),
     'sent_length': hp.choice("sent_length", [8, 10, 12, 15]),
     'use_class_weights': hp.choice("use_class_weights", [True, False]),
-    'learning_rate': hp.loguniform('learning_rate', np.log(0.001), np.log(0.015))
+    'learning_rate': hp.loguniform('learning_rate', np.log(0.001), np.log(0.03)),
+    'dropout_prop': hp.choice("dropout", [0, .05, .1, .15, .2, .25, .3, .35, .4, .45, .5])
 }
 
 #%% Test space
@@ -155,7 +178,7 @@ space = {
 from hyperopt.pyll.stochastic import sample
 parameters = sample(space)
 print(parameters)
-#po = HAN_search(parameters)
+po = HAN_search(parameters)
 
 #%% Run the optimizer
 
@@ -168,13 +191,20 @@ bayes_trials = Trials()
 with open(args.out_file, 'w') as of_connection:
   writer = csv.writer(of_connection)
   # Write the headers to the file
-  writer.writerow(['params', 'train_loss', 'train_accuracy', 'iteration', 'val_accuracy', 'val_loss', "val_f1", "val_precision", "val_recall"])
+  writer.writerow(['params',
+                   'iteration',
+                   'train_loss',
+                   'val_accuracy',
+                   'val_loss',
+                   "val_f1",
+                   "val_precision",
+                   "val_recall"])
 
 # Optimize
 best = fmin(fn = HAN_search, space = space, algo = tpe.suggest,
             max_evals = args.max_evals, trials = bayes_trials)
 
-#%% Train HAN
+#%% Train HAN on best parameters and train data
 
 max_sent_length = 10
 

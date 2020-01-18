@@ -14,8 +14,6 @@ from preprocess_utils import tokenize_text
 import os
 import itertools
 
-## MAKE SURE TO SHUFFLE DATA
-
 # Settings
 args = Namespace(
     # Directories
@@ -350,14 +348,14 @@ for max_sent_len in args.max_sent_length_han:
             i += 1
         labels_vect.append(label_to_idx[label])
 
-    # Train/test
+    # Train/test (shuffle by same random permutation as above)
     docs_vectorized = [docs_vectorized[idx] for idx in rp]
-    labels = [labels[idx] for idx in rp]
+    labels = [labels_vect[idx] for idx in rp]
     # Split
-    train_x = [docs_vectorized[idx] for idx in range(test_idx)]
-    test_x = [docs_vectorized[idx] for idx in range(test_idx, len(docs_vectorized))]
-    train_y = [labels[idx] for idx in range(test_idx)]
-    test_y = [labels[idx] for idx in range(test_idx, len(docs_vectorized))]
+    test_x = [docs_vectorized[idx] for idx in range(test_idx)]
+    train_x = [docs_vectorized[idx] for idx in range(test_idx, len(docs_vectorized))]
+    test_y = [labels[idx] for idx in range(test_idx)]
+    train_y = [labels[idx] for idx in range(test_idx, len(docs_vectorized))]
 
     ### Load the embeddings
     # Get tokens to be looked up in FT embedding

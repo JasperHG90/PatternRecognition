@@ -253,7 +253,6 @@ def train_han(X, y, model, optimizer, criterion, epochs = 10,
                    "validation_recall":validation_recall,
                    "validation_f1":validation_f1})
 
-
 """
 PyTorch modules:
     The PyTorch modules below implement the HAN with attention. The following modules are added.
@@ -379,7 +378,8 @@ class sentence_encoder(nn.Module):
 #%% HAN
 
 class HAN(nn.Module):
-    def __init__(self, weights, hidden_size_words, hidden_size_sent, batch_size, num_classes, device = "cpu"):
+    def __init__(self, weights, hidden_size_words, hidden_size_sent, batch_size, num_classes, device = "cpu",
+                 dropout_prop = 0):
         """
         Implementation of a Hierarhical Attention Network (HAN).
 
@@ -395,6 +395,7 @@ class HAN(nn.Module):
         self._embedding_dim = weights.shape
         self._num_classes = num_classes
         self._batch_size = batch_size
+        self._dropout_prop = dropout_prop
         # Embedding
         self.embedding = Embedding_FastText(weights, freeze_layer = True)
         # Set up word encoder
@@ -410,10 +411,7 @@ class HAN(nn.Module):
 
         :return: tensor of shape (batch_size, num_classes) and, optionally, the attention vectors for the word and sentence encoders.
         """
-        # Init hidden states
-        #hid_state_word = self.init_hidden_word()
-        #hid_state_sent 
-        # Placeholder
+        # Placeholders
         batched_sentences = None
         hid_sent = None
         # If return attention weights
@@ -441,17 +439,13 @@ class HAN(nn.Module):
                 word_weights.append(hid_state[1].data)
                 if hid_sent is not None:
                     sentence_weights.append(hid_sent[1].data)
+        # Apply dropout
+        out_sent_dropout = F.dropout(out_sent.squeeze(0), p=self._dropout_prop)
         # Linear layer & softmax
-        prediction_out = F.softmax(self._linear1(out_sent.squeeze(0)), dim = 1)
+        prediction_out = F.softmax(self._linear1(out_sent_dropout), dim = 1)
         # Return
         if return_attention_weights:
             return(prediction_out, [word_weights, sentence_weights])
         else:
             return(prediction_out)
-    
-    def init_hidden_sent(self):
-            return Variable(torch.zeros(2, self._batch_size, self._hidden_size_sent))
-    
-    def init_hidden_word(self):
-            return Variable(torch.zeros(2, self._batch_size, self._hidden_size_words))
 
