@@ -210,8 +210,8 @@ def baselineNN_search(parameters):
     writer.writerow([parameters,
                      which_min,
                      np.round(train_loss[which_min], 4),
-                     np.round(val_loss[which_min], 4),
                      np.round(val_accuracy[which_min], 4),
+                     np.round(val_loss[which_min], 4),
                      np.round(val_f1[which_min], 4),
                      np.round(val_precision[which_min], 4),
                      np.round(val_recall[which_min], 4)])
@@ -243,9 +243,14 @@ bayes_trials = Trials()
 with open(args.out_file, 'w') as of_connection:
   writer = csv.writer(of_connection)
   # Write the headers to the file
-  writer.writerow(['params', 'iteration',
-                   'train_loss',  'val_loss', 'val_accuracy',
-                   "val_f1", "val_precision","val_recall"])
+  writer.writerow(['params',
+                   'iteration',
+                   'train_loss',
+                   'val_accuracy',
+                   'val_loss',
+                   "val_f1",
+                   "val_precision",
+                   "val_recall"])
 
 # Optimize
 best = fmin(fn = baselineNN_search, space = space, algo = tpe.suggest,
