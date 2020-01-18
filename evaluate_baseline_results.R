@@ -1,5 +1,5 @@
 ## Look at the results of the model
-m <- "results/baselineNN_trials.csv"
+m <- "results/basicNN_trials.csv"
 io <- read.csv(m, stringsAsFactors = FALSE)
 # Get json
 hparams <- io$params
@@ -30,12 +30,11 @@ library(purrr)
 library(dplyr)
 hparams_processed <- map_df(hparams, outpar) %>%
   mutate(loss = io$val_loss,
-         test_acc = io$test_accuracy,
-         test_f1 = io$test_f1) %>%
+         val_acc = io$val_accuracy,
+         val_f1 = io$val_f1) %>%
   mutate(use_batch_norm = ifelse(use_batch_norm == "True", TRUE, FALSE),
          quantilegrp = cut(loss, quantile(loss)),
-         optimizer_adam = ifelse(optimizer == "Adam", TRUE, FALSE),
-         weighted_loss = ifelse(weighted_loss == "True", TRUE, FALSE)) %>%
+         optimizer_adam = ifelse(optimizer == "Adam", TRUE, FALSE)) %>%
   select(-optimizer)
 
 # Plot some density plots
@@ -54,6 +53,9 @@ i <- hparams_processed %>%
     theme_bw() +
     facet_wrap(.~ variable, nrow = 3, scales = "free_y")
 i
+
+# Best
+hparams_processed %>% arrange(desc(val_acc))
 
 # Learning rate
 ggplot(hparams_processed, aes(x=(learning_rate))) +
@@ -95,10 +97,6 @@ ggplot(hparams_processed %>% group_by(hidden_units) %>%
          tally(), aes(x= hidden_units, y = n)) +
     geom_bar(stat = "identity")
 # Model clearly favours larger architecture
-
-ggplot(hparams_processed %>% group_by(filter_size_1) %>%
-         tally(), aes(x= filter_size_1, y = n)) +
-  geom_bar(stat = "identity")
 
 ggplot(hparams_processed, aes(x=learning_rate, y = loss, color=optimizer_adam)) +
   geom_point() +
