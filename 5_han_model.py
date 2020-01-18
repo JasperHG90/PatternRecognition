@@ -36,7 +36,7 @@ args = Namespace(
     # Tokenizer
     data_files_map=slmap,
     # File to save results
-    out_file='results/basicNN_trials.csv',
+    out_file='results/HAN_trials.csv',
     # Number of times to evaluate bayesian search for hyperparams
     # NB: the HAN is very expensive to run even on a GPU
     max_evals=300,
@@ -169,7 +169,7 @@ space = {
     'sent_length': hp.choice("sent_length", [8, 10, 12, 15]),
     'use_class_weights': hp.choice("use_class_weights", [True, False]),
     'learning_rate': hp.loguniform('learning_rate', np.log(0.001), np.log(0.03)),
-    'dropout_prop': hp.choice("dropout", [0, .05, .1, .15, .2, .25, .3, .35, .4, .45, .5])
+    'dropout_prop': hp.uniform("dropout", 0, 0.5)
 }
 
 #%% Test space

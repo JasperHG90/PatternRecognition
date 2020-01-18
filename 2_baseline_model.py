@@ -223,7 +223,7 @@ space = {
     'hidden_units': hp.choice('hidden_units', [64,128,256,512]),
     'optimizer': hp.choice("optimizer", ["Adam", "RMSprop"]),
     'use_batch_norm': hp.choice("use_batch_norm", [True, False]),
-    'dropout': hp.choice("dropout", [0, .05, .1, .15, .2, .25, .3, .35, .4, .45, .5]),
+    'dropout': hp.uniform("dropout", 0, 0.5),
     'learning_rate': hp.loguniform('learning_rate', np.log(0.001), np.log(0.02))
 }
 
@@ -232,7 +232,7 @@ from hyperopt.pyll.stochastic import sample
 params = sample(space)
 po = baselineNN_search(params)
 
-#%%
+#%% Run bayesian optimization
 
 # Algorithm
 tpe_algorithm = tpe.suggest
@@ -261,58 +261,68 @@ best = fmin(fn = baselineNN_search, space = space, algo = tpe.suggest,
 from skorch import NeuralNet
 from skorch.dataset import CVSplit
 
+# Best parameters
+best = Namespace(
+    hidden_units=512,
+    dropout=0.01285,
+    learning_rate=0.001435,
+    optimizer=optim.Adam,
+    use_batch_norm=True,
+    iterations=23,
+    batch_size=128
+)
+
 # Run the model with the best parameters
 net = NeuralNet(
     # Module
     module=BaselineNN,
     # Module settings
-    module__hidden_dim = 512,
-    module__p_dropout = 0.1,
-    module__use_batch_norm = True,
+    module__hidden_dim = best.hidden_units,
+    module__p_dropout = best.dropout,
+    module__use_batch_norm = best.use_batch_norm,
     module__weights = FTEMB,
     module__num_classes = len(category_map),
     # Epochs & learning rate
-    max_epochs=25,
-    lr=0.00172,
+    max_epochs=best.iterations,
+    lr=best.learning_rate,
     # Optimizer
-    optimizer=optim.Adam,
+    optimizer=best.optimizer,
     # Loss function
     criterion=nn.CrossEntropyLoss,
     criterion__weight = cw,
     # Shuffle training data on each epoch
     iterator_train__shuffle=True,
     # Batch size
-    batch_size = 128,
+    batch_size = best.batch_size,
     train_split = CVSplit(cv=5),
     # Device
-    device = device
+    device = device,
+    # Callbacks
+    callbacks=[
+        skorch.callbacks.EpochScoring(f1_score, use_caching=True, name="valid_f1"),
+        skorch.callbacks.EpochScoring(precision_score, use_caching=True, name="valid_precision"),
+        skorch.callbacks.EpochScoring(recall_score, use_caching=True, name="valid_recall"),
+        skorch.callbacks.EpochScoring(accuracy_score, use_caching=True, name="valid_accuracy")
+    ]
 )
 
 # Verbose to false
 net.verbose = 1
 
-#%%
+# Split into train/test
+train,test = split(WD, val_prop=0.1, seed=553344)
 
-X, y = train_x, np.array(train_y)
-rp = np.random.permutation(y.shape[0])
-X = X[rp,:]
-y = y[rp]
-
-#%%
-
-train_now = WikiData(X, y)
 # Fit
-#train_now, test_now = split(VitalArticles, val_prop=0.1)
-io = net.fit(train_now)
+io = net.fit(train)
 
 #%% Predict on train
 
 # Out
-yhat = net.predict(train_now)
+yhat = net.predict(test)
 # Classes
 yhatc = yhat.argmax(axis=1)
 # True labels
-ytrue = train_now.y
+ytrue = test.y
 (ytrue == yhatc).sum() / yhatc.size
 
 # Classification report

@@ -1,0 +1,2 @@
+params,iteration,train_loss,val_accuracy,val_loss,val_f1,val_precision,val_recall
+"{'dropout_prop': 0.22355201014717396, 'hidden_size': 32, 'learning_rate': 0.005184321703245956, 'sent_length': 10, 'use_class_weights': False}",8,1.7144,0.839,1.7067,0.7569,0.8392,0.7926
