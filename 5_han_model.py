@@ -4,10 +4,7 @@
 from HAN import HAN, WikiDocData, split_data, train_han, batcher, process_batch
 import pickle
 import numpy as np
-import uuid
 import os
-import syntok.segmenter as segmenter
-from tqdm import tqdm
 import torch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 from torch import optim
@@ -16,241 +13,243 @@ from sklearn import metrics
 
 # Import namespace
 from argparse import Namespace
+from keras.preprocessing.text import Tokenizer # Use keras for tokenization & preprocessing
+import itertools
 
 # Helper functions
 from preprocess_utils import tokenize_text
 import os
 import pickle
 
-# Set up namespace
+# Base directory
+bd = "data/HAN"
+# Create a map for the different sentence lengths
+slmap = {}
+for sl in ["S8", "S10", "S12", "S15"]:
+    idx=int(sl.strip("S"))
+    slmap[idx] = {"tokenizer": os.path.join(bd, "tokenizer_{}.pickle".format(sl)),
+                 "embedding": os.path.join(bd, "HAN_embeddings_{}.pickle".format(sl)),
+                 "input_data": os.path.join(bd, "data_{}.pickle".format(sl))}
+
+# Model settings
 args = Namespace(
-    # Input data settings
-    data_dir = "data",
-    data_prefix = "WikiEssentials_L4",
-    # Preprocessing settings
-    token_lower = False,
-    token_remove_digits = True,
-    # Tokenizer etc.
-    max_vocab_size = 20000
+    # Tokenizer
+    data_files_map=slmap,
+    # File to save results
+    out_file='results/HAN_trials.csv',
+    # Number of times to evaluate bayesian search for hyperparams
+    # NB: the HAN is very expensive to run even on a GPU
+    max_evals=300,
+    # Embedding size
+    embedding_dim=300,
+    # NN settings
+    embedding_trainable=False,
+    # Batch size
+    batch_size=128
 )
 
-# Run preprocess function
-path_to_file = os.path.join(args.data_dir, args.data_prefix + ".txt")
+#%% Load the data for one of the sentence lengths
 
-#%% Preprocess the input data
+sent_length = 10
 
-if not os.path.exists("data/HAN_wiki_preprocessed.pickle"):
-    # Load data
-    inputs = {"History":{}, "Geography":{}, "Philosophy_and_religion":{}, 
-            "Mathematics": {}, "Arts": {}, "Technology": {}, "Society_and_social_sciences":{}, 
-            "Everyday_life": {}, "Physical_sciences": {}, "People": {},
-            "Biology_and_health_sciences": {}}
-    failed = []
-    previous_docnr = "default"
-    # Max sentence length
-    MAX_SENT_LENGTH = 8
-    #stop = 100
-    with open(path_to_file, "r", encoding="utf8") as inFile:
-        # Counter for the number of sentences processed
-        sentcount = 0
-        # Capture sentences
-        sent_level = list()
-        # Identifier when doc is finished
-        docfinish = False
-        i = 0
-        # Read lines
-        for line in tqdm(inFile):
-            #if i == stop:
-            #    break
-            if i == 0:
-                i += 1
-                continue
-            # Split at first whitespace
-            lnsp = line.split("\t")
-            # Take label
-            lbl = lnsp[1]
-            # Split labels
-            lblsp = lbl.split("+")
-            lbl0 = lblsp[0]
-            # Get doc number
-            if lnsp[0] != previous_docnr:
-                if sentcount < 15:
-                    # Take doc number
-                    docnr = lnsp[0]
-                    # Add to inputs
-                    inputs[lbl0][docnr] = sent_level                
-                    # Reset
-                    sent_level = list()
-                    sentcount = 0
-                    docfinish = False
-            # Set previous doc number to current
-            previous_docnr = lnsp[0]
-            # Process each sentence of paragraph, unless already have enough sentences
-            if docfinish: continue
-            a = segmenter.process(lnsp[-1])
-            for par in a:
-                for sent in par:
-                    csent = "".join([token.spacing + token.value for token in sent]).strip()
-                    # Tokenize text
-                    txt_tok = tokenize_text(csent,
-                                            lower_tokens=args.token_lower,
-                                            remove_digits_token=args.token_remove_digits)
-                    # If none, pass ...
-                    if txt_tok is None:
-                        failed.append(csent)
-                        continue
-                    else:
-                        sent_level.append(txt_tok)
-                        sentcount += 1
-                        if sentcount > MAX_SENT_LENGTH:
-                            # Take doc number
-                            docnr = lnsp[0]
-                            # Add to inputs
-                            inputs[lbl0][docnr] = sent_level
-                            # Set doc to finished
-                            docfinish = True
-                            break
-            i += 1
-    # Save
-    with open("data/HAN_wiki_preprocessed.pickle", "wb") as outFile:
-        pickle.dump(inputs, outFile, protocol=pickle.HIGHEST_PROTOCOL)
-else:
-    with open("data/HAN_wiki_preprocessed.pickle", "rb") as inFile:
-        inputs = pickle.load(inFile)
-
-# How many items?
-for k, v in inputs.items():
-    print(k)
-    print(len(v))
-print("-------")
-print("Total items: " + str(sum([len(v) for v in inputs.values()])))
-
-#%% Further preprocessing
-
-# Reshape data susch that it is a nested list of:
-# --> documents
-#  --> sentences
-docs = []
-labels = []
-for label, documents in inputs.items():
-    for doc_id, content in documents.items():
-        docs.append(content)
-        labels.append(label)
-
-# View
-docs[0]
-
-#%% Set up the tokenizer
-
-# First, create a tokenizer and choose 20.000 most common words
-from keras.preprocessing.text import Tokenizer # Use keras for tokenization & preprocessing
-import itertools
-
-# Flatten the inputs data
-inputs_flat = [txt for txt in itertools.chain(*docs)]
-
-# Create tokenizer
-tokenizer = Tokenizer(num_words=args.max_vocab_size,
-                      lower = False,
-                      filters = '!"$%&()*+,./:;<=>?@[\\]^_`{|}~\t\n')
-
-# Fit on the documents
-tokenizer.fit_on_texts(inputs_flat)
-
-# Number of unique words
-word_index = tokenizer.word_index
-print('Found %s unique tokens.' % len(word_index))
-
-#%% Vectorize the documents
-
-# Vectorize the documents (original 'docs' list)
-docs_vectorized = [tokenizer.texts_to_sequences(doc) for doc in docs]
-
-# Look
-print(docs_vectorized[0])
-
-# Vectorize outcome labels
-label_to_idx = {}
-idx_to_label = {}
-labels_vect = []
-i = 0
-for label in labels:
-    if label_to_idx.get(label) is None:
-        label_to_idx[label] = i
-        idx_to_label[i] = label
-        i += 1
-    labels_vect.append(label_to_idx[label])
-
-# View
-label_to_idx
-
-#%% Set up the embedding
-
-if not os.path.exists("embeddings/HAN_embeddings.pickle"):
-    ### Load the embeddings
-    from model_utils import load_FT
-    # Get tokens to be looked up in FT embedding
-    WI = {k:v for k,v in tokenizer.word_index.items() if v <= (args.max_vocab_size - 1)}
-    FTEMB = load_FT("embeddings/wiki-news-300d-1M.vec", WI, 300, args.max_vocab_size)
-    # Check which are 0
-    io = np.sum(FTEMB, axis=1)
-    zerovar = np.where(io == 0)[0]
-    # Get words
-    zerovar_words = {k:v for k,v in WI.items() if v in zerovar}
-    zerovar_words
-    # Save mbedding
-    with open("embeddings/HAN_embeddings.pickle", "wb") as outFile:
-        pickle.dump(FTEMB, outFile, protocol=pickle.HIGHEST_PROTOCOL)
-else:
-    with open("embeddings/HAN_embeddings.pickle", "rb") as inFile:
-        FTEMB = pickle.load(inFile)
+# Load
+with open(args.data_files_map[sent_length]["tokenizer"], "rb") as inFile:
+    tokenizer = pickle.load(inFile)
+with open(args.data_files_map[sent_length]["embedding"], "rb") as inFile:
+    FTEMB = torch.tensor(pickle.load(inFile)).to(device)
+with open(args.data_files_map[sent_length]["input_data"], "rb") as inFile:
+    data = pickle.load(inFile)
+# Unpack
+train_x, train_y = data["train_x"], data["train_y"]
+labels_vect = data["labels_vectorized"]
+idx_to_label = data["idx_to_label"]
+label_to_idx = data["labels_to_idx"]
 
 #%% View the max length of all sentences in all documents
 
 # Max length of the sentences
 # (itertools.chain(*X)) makes list of lists into one, flat list
-max_seq_len = max([len(seq) for seq in itertools.chain(*docs_vectorized)])
+max_seq_len = max([len(seq) for seq in itertools.chain(*train_x)])
 
 # Max length of documents (shoudl all be the same)
-max_seq_doc = max([len(doc) for doc in docs_vectorized])
+max_seq_doc = max([len(doc) for doc in train_x])
 
 # View
 print((max_seq_len))
 print((max_seq_doc))
 
-#%% Class weights
+#%% Class weights (these are the same for each)
 
-cw = [len(v) for k,v in inputs.items()]
-cw = np.max(cw) / cw
-cw = torch.tensor(cw).type(torch.float).to(device)
+# Class weights
+# Preprocess outcome label
+train_y_ohe = np.zeros((len(train_y), len(data["labels_to_idx"])))
+for idx,lbl in enumerate(train_y):
+  train_y_ohe[idx, lbl] = 1
+# These weights are unnormalized but that's what pytorch is expecting
+cw = torch.tensor(np.max(np.sum(train_y_ohe, axis=0)) / (np.sum(train_y_ohe, axis=0))).type(torch.float).to(device)
 
-#%% Set up the model
+#%% Unique classes
 
-# Hidden size
-hidden_size = 64
-batch_size = 128
 num_classes = len(np.unique(labels_vect))
 
-# Set up the model
-WikiHAN = HAN(FTEMB, hidden_size, hidden_size, batch_size, num_classes)
+#%% Use hyperopt (Bayesian hyperparameter optimization) to search for good hyperparams
 
-# Set up optimizer
-optimizer = optim.Adam(WikiHAN.parameters(), lr = 0.004)
+from hyperopt import STATUS_OK
+import csv
+from hyperopt import hp
+# Optimizer
+from hyperopt import tpe
+# Save basic training information
+from hyperopt import Trials
+# Optimizer criterion
+from hyperopt import fmin
+# Use skorch for cross-validation
+from skorch import NeuralNet
+from skorch.dataset import CVSplit
+# Tracking precision//recall//F1
+from sklearn import metrics
 
-# Criterion
-criterion = nn.CrossEntropyLoss(weight=cw)
+# Function that sets up model and outputs and returns validation loss
+def HAN_search(parameters):
+    """Set up, run and evaluate a HAN"""
+    # Based on the parameters, load various settings
+    sent_length = parameters["sent_length"]
+    # Load data
+    with open(args.data_files_map[sent_length]["tokenizer"], "rb") as inFile:
+        tokenizer = pickle.load(inFile)
+    with open(args.data_files_map[sent_length]["embedding"], "rb") as inFile:
+        FTEMB = torch.tensor(pickle.load(inFile)).to(device)
+    with open(args.data_files_map[sent_length]["input_data"], "rb") as inFile:
+        data = pickle.load(inFile)
+    # Unpack
+    train_x, train_y = data["train_x"], data["train_y"]
+    labels_vect = data["labels_vectorized"]
+    idx_to_label = data["idx_to_label"]
+    label_to_idx = data["labels_to_idx"]
+    # Set up the model
+    WikiHAN = HAN(FTEMB,
+                  parameters["hidden_size"],
+                  parameters["hidden_size"],
+                  args.batch_size,
+                  num_classes,
+                  dropout_prop=parameters["dropout_prop"])
+    # To cuda
+    WikiHAN.to(device)
+    # Set up optimizer
+    optimizer = optim.Adam(WikiHAN.parameters(), lr=parameters["learning_rate"])
+    # Criterion
+    if parameters["use_class_weights"]:
+      criterion = nn.CrossEntropyLoss(weight=cw)
+    else:
+      criterion = nn.CrossEntropyLoss()
+    # Run the model
+    WikiHAN_out, history = train_han(train_x, train_y, WikiHAN, optimizer, criterion,
+                                   epochs=10, val_split=0.1, batch_size=args.batch_size,
+                                   device=device)
+    # Max accuracy
+    which_min = int(np.argmin(history["validation_loss"]))
+    # Write to file
+    with open(args.out_file, 'a') as of_connection:
+        writer = csv.writer(of_connection)
+        writer.writerow([parameters,
+                         which_min,
+                         np.round(history["training_loss"][which_min], 4),
+                         np.round(history["validation_accuracy"][which_min], 4),
+                         np.round(history["validation_loss"][which_min], 4),
+                         np.round(history["validation_f1"][which_min], 4),
+                         np.round(history["validation_precision"][which_min], 4),
+                         np.round(history["validation_recall"][which_min], 4)])
+    # Return cross-validation loss
+    # NB: we are minimizing here zo we need to take 1-accuracy
+    return({"loss": history["validation_loss"][which_min], "parameters": parameters, "iteration": which_min, 'status':STATUS_OK})
 
-#%% Prepare train /test data
+# Define the search space
+space = {
+    'hidden_size': hp.choice('hidden_units', [32,64,128]),
+    'sent_length': hp.choice("sent_length", [8, 10, 12, 15]),
+    'use_class_weights': hp.choice("use_class_weights", [True, False]),
+    'learning_rate': hp.loguniform('learning_rate', np.log(0.001), np.log(0.03)),
+    'dropout_prop': hp.uniform("dropout", 0, 0.5)
+}
 
-# Create batched data
+#%% Test space
+
+# Test if works
+from hyperopt.pyll.stochastic import sample
+parameters = sample(space)
+print(parameters)
+po = HAN_search(parameters)
+
+#%% Run the optimizer
+
+# Algorithm
+tpe_algorithm = tpe.suggest
+
+# Trials object to track progress
+bayes_trials = Trials()
+# File to save first results
+with open(args.out_file, 'w') as of_connection:
+  writer = csv.writer(of_connection)
+  # Write the headers to the file
+  writer.writerow(['params',
+                   'iteration',
+                   'train_loss',
+                   'val_accuracy',
+                   'val_loss',
+                   "val_f1",
+                   "val_precision",
+                   "val_recall"])
+
+# Optimize
+best = fmin(fn = HAN_search, space = space, algo = tpe.suggest,
+            max_evals = args.max_evals, trials = bayes_trials)
+
+#%% Train HAN on best parameters and train data
+
+max_sent_length = 10
+
+# Load data for the sentence length
+sent_length = max_sent_length
+with open("tokenizers/tokenizer_S{}.pickle".format(sent_length), "rb") as inFile:
+    tokenizer = pickle.load(inFile)
+with open("embeddings/HAN_embeddings_S{}.pickle".format(sent_length), "rb") as inFile:
+    FTEMB = torch.tensor(pickle.load(inFile)).to(device)
+with open("tokenizers/data_S{}.pickle".format(sent_length), "rb") as inFile:
+    data = pickle.load(inFile)
+# Unpack
+docs_vectorized = data["docs_vectorized"]
+labels_vect = data["labels_vectorized"]
+idx_to_label = data["idx_to_label"]
+label_to_idx = data["labels_to_idx"]
+
+best = Namespace(
+    hidden_size = 64,
+    use_class_weights = True,
+    batch_size = 128,
+    num_classes = len(np.unique(labels_vect)),
+    learning_rate = 0.01105,
+    epochs = 6
+)
+
+# Split
 train, val = split_data(docs_vectorized, labels_vect, 6754, p=0.05)
 # Make dataset
 test = WikiDocData(val[0], val[1])
+# Set up the model
+WikiHAN = HAN(FTEMB, best.hidden_size, best.hidden_size, best.batch_size, best.num_classes)
+# To cuda
+WikiHAN.to(device)
+# Set up optimizer
+optimizer = optim.Adam(WikiHAN.parameters(), lr= best.learning_rate)
+# Criterion
+if best.use_class_weights:
+    criterion = nn.CrossEntropyLoss(weight=cw)
+else:
+    criterion = nn.CrossEntropyLoss()
 
-#%% Train HAN
-
+# Training routine
 WikiHAN_out, history = train_han(train[0], train[1], WikiHAN, optimizer, criterion,
-                                epochs = 5, val_split = 0.1, batch_size = batch_size,
+                                epochs = best.epochs, val_split = 0.1, batch_size = best.batch_size,
                                 device = device)
 
 #%% Evaluate the model on test data
@@ -269,19 +268,23 @@ with torch.no_grad():
 # %% Classes
 
 # To classes
-out = torch.argmax(probs, dim=1).numpy()
+out = torch.argmax(probs, dim=1).cpu().numpy()
 
 # Get true label
 ytrue = [batch[1] for batch in valbatch]
-ytrue = torch.tensor(ytrue).numpy()
+ytrue = torch.tensor(ytrue).cpu().numpy()
 
 # Accuracy
-sum(out == ytrue)/len(out)
+print(sum(out == ytrue)/len(out))
 
 #%% Print classification report
 
 # Print classification report
 print(metrics.classification_report(ytrue, out, target_names = list(label_to_idx.keys())))
+
+#%% Save model
+
+torch.save(WikiHAN_out.state_dict(), "models/HAN.pt")
 
 # %% Get attention weights
 
@@ -293,6 +296,8 @@ with torch.no_grad():
 # %% Preprocess attention weights
 
 word_weights, sent_weights = attn
+word_weights = [we.cpu() for we in word_weights]
+sent_weights = [se.cpu() for se in sent_weights]
 print(len(word_weights))
 print(len(sent_weights))
 
@@ -310,7 +315,7 @@ print(len(sent_weights))
 word_weights[0].shape
 
 # Reverse word index so it is easy to go from vectorized word ==> actual word
-idx_to_word = {v:k for k,v in word_index.items()}
+idx_to_word = {v:k for k,v in tokenizer.word_index.items()}
 
 def word_attention(attention_vector, seq, idx_to_word):
     """
@@ -409,6 +414,7 @@ seq = valbatch[doc_idx][0][sentence_idx].numpy()
 att_weights = word_attention(attv[doc_idx,:,:], seq, idx_to_word)
 # Print output label
 print(idx_to_label[int(valbatch[doc_idx][1].numpy())])
+print(idx_to_label[int(out[doc_idx])])
 print(att_weights)
 
 # %% Plot weights
@@ -424,7 +430,7 @@ print(idx_to_label[int(valbatch[doc_idx][1].numpy())])
 word_weights_by_sentence = []
 word_weights_original = []
 # Get sentence attention weights
-sa = sentence_attention(sent_weights[7][doc_idx,:,:].numpy())
+sa = sentence_attention(sent_weights[9][doc_idx,:,:].numpy())
 # Weight the word attention weights by the sentence weights
 for sentence_idx in range(0, len(word_weights)):
     # Subset attention vector

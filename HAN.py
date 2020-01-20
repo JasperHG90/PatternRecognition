@@ -19,8 +19,12 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.nn.utils.rnn import pad_packed_sequence
 from torch.nn.utils.rnn import pack_padded_sequence
 from torch.autograd import Variable
-from model_utils import Embedding_FastText
 import numpy as np
+from sklearn import metrics
+# This is a technical thing
+# See stackoverflow:
+#   - PyTorch: training with GPU gives worse error than training the same thing with CPU
+torch.backends.cudnn.enabled = False
 
 """
 HAN utility functions:
@@ -28,6 +32,11 @@ HAN utility functions:
     steps and dataset construction are a little different from the other models. The preprocessing 
     functions are as follows:
         1. Embedding_FastText: creates a Pytorch embedding layer from pre-trained weights
+        2. WikiDocData: Pytorch Dataset used to store & retrieve wikipedia data.
+        3. batcher: function that creates minibatches for training
+        4. process_batch: processes a minibatch of wikipedia articles.
+        5. split_data: function that splits wikipedia data into train & test
+        6. train_han: training regime for the HAN.
 """
 
 # Create FastText embedding for PyTorch
@@ -37,7 +46,7 @@ def Embedding_FastText(weights, freeze_layer = True):
     # Set up layer
     embedding = nn.Embedding(examples, embedding_dim)
     # Add weights
-    embedding.load_state_dict({"weight": torch.tensor(weights)})
+    embedding.load_state_dict({"weight": weights})
     # If not trainable, set option
     if freeze_layer:
         embedding.weight.requires_grad = False
@@ -78,11 +87,17 @@ def process_batch(batch, device = "cpu"):
     Process a minibatch for handing off to the HAN
     """
     # Get the length of a document in the batch
-    doc_len = len(batch[0][0])
+    doc_len = np.max([len(b[0]) for b in batch])
     # Place the first sentences for each doc in one list, second sentences also etc.
     seq_final = []
     seq_lens = []
+    # Pad documents with fewer sentences than the maximum number of sequences
+    # This allows training of documents of different size
+    for j in range(len(batch)):
+        if len(batch[j][0]) < doc_len:
+            batch[j] = (batch[j][0] + (doc_len - len(batch[j][0])) * [torch.tensor([0]).type(torch.long)], batch[j][1])
     for i in range(doc_len):
+        # Get sequences
         sent_seq = [b[0][i] for b in batch]
         # Record lengths of sequences
         sent_lens = [len(sent) for sent in sent_seq]
@@ -142,7 +157,11 @@ def train_han(X, y, model, optimizer, criterion, epochs = 10,
     # Keep track of training loss / accuracy
     training_loss = []
     training_acc = []
+    validation_loss = []
     validation_acc = []
+    validation_precision = []
+    validation_recall = []
+    validation_f1 = []
     # For each epoch, train the mopdel
     for epoch in range(0, epochs):
         epoch += 1
@@ -168,13 +187,13 @@ def train_han(X, y, model, optimizer, criterion, epochs = 10,
             # Zero gradients
             model.zero_grad()
             # Predict output
-            predict_out = model(seqs, lens)
+            predict_out = model(seqs, torch.tensor(lens).type(torch.long).to(device))
             # Get max
             predict_class = torch.argmax(predict_out, dim=1).cpu().numpy()
             # Loss
             loss_out = criterion(predict_out, labels_ground_truth)
             # As item
-            loss_value = loss_out.item()
+            loss_value = loss_out.cpu().item()
             # GT labels to numpy
             labels_ground_truth = labels_ground_truth.cpu().numpy()
             acc_batch = sum(predict_class == labels_ground_truth) / labels_ground_truth.shape[0]
@@ -195,15 +214,29 @@ def train_han(X, y, model, optimizer, criterion, epochs = 10,
         with torch.no_grad():
             model.eval()
             io = batcher(batch_val_data, len(batch_val_data.X))
+            # Process true label
+            ytrue = [doc[1] for doc in io]
+            ytrue = torch.tensor(ytrue).to(device)
             # Process batches
             seqs, lens = process_batch(io, device = device)
-            out = torch.argmax(model(seqs, lens), dim=1)
-        # Process true label
-        ytrue = [doc[1] for doc in io]
-        ytrue = torch.tensor(ytrue).numpy()
+            # To outcome probabilities
+            out = model(seqs, lens)
+            loss_out = criterion(out, ytrue)
+            # To class labels
+            out = torch.argmax(out, dim=1)
+        # Make true values into numpy array
+        ytrue = ytrue.cpu().numpy()
+        # Metrics
+        val_metrics = metrics.precision_recall_fscore_support(ytrue,
+                                                              out.cpu().numpy(),
+                                                              average="weighted")
         # Acc
-        val_acc = np.round(sum(out.numpy() == ytrue) / ytrue.shape[0], 3)
+        val_acc = np.round(sum(out.cpu().numpy() == ytrue) / ytrue.shape[0], 3)
         validation_acc.append(val_acc)
+        validation_loss.append(loss_out.cpu().item())
+        validation_precision.append(val_metrics[1])
+        validation_recall.append(val_metrics[2])
+        validation_f1.append(val_metrics[0])
         # Print
         print("-------------")
         print("Training Loss is {} at epoch {} ...".format(np.round(running_loss, 3), epoch))
@@ -212,8 +245,13 @@ def train_han(X, y, model, optimizer, criterion, epochs = 10,
         print("-------------")
 
     # Return
-    return(model, {"training_loss": training_loss, "training_acc": training_acc, "validation_acc": validation_acc})
-
+    return(model, {"training_loss": training_loss,
+                   "training_accuracy": training_acc,
+                   "validation_loss":validation_loss,
+                   "validation_accuracy": validation_acc,
+                   "validation_precision":validation_precision,
+                   "validation_recall":validation_recall,
+                   "validation_f1":validation_f1})
 
 """
 PyTorch modules:
@@ -340,7 +378,8 @@ class sentence_encoder(nn.Module):
 #%% HAN
 
 class HAN(nn.Module):
-    def __init__(self, weights, hidden_size_words, hidden_size_sent, batch_size, num_classes):
+    def __init__(self, weights, hidden_size_words, hidden_size_sent, batch_size, num_classes, device = "cpu",
+                 dropout_prop = 0):
         """
         Implementation of a Hierarhical Attention Network (HAN).
 
@@ -356,6 +395,7 @@ class HAN(nn.Module):
         self._embedding_dim = weights.shape
         self._num_classes = num_classes
         self._batch_size = batch_size
+        self._dropout_prop = dropout_prop
         # Embedding
         self.embedding = Embedding_FastText(weights, freeze_layer = True)
         # Set up word encoder
@@ -371,10 +411,7 @@ class HAN(nn.Module):
 
         :return: tensor of shape (batch_size, num_classes) and, optionally, the attention vectors for the word and sentence encoders.
         """
-        # Init hidden states
-        #hid_state_word = self.init_hidden_word()
-        #hid_state_sent 
-        # Placeholder
+        # Placeholders
         batched_sentences = None
         hid_sent = None
         # If return attention weights
@@ -402,17 +439,13 @@ class HAN(nn.Module):
                 word_weights.append(hid_state[1].data)
                 if hid_sent is not None:
                     sentence_weights.append(hid_sent[1].data)
+        # Apply dropout
+        out_sent_dropout = F.dropout(out_sent.squeeze(0), p=self._dropout_prop)
         # Linear layer & softmax
-        prediction_out = F.softmax(self._linear1(out_sent.squeeze(0)), dim = 1)
+        prediction_out = F.softmax(self._linear1(out_sent_dropout), dim = 1)
         # Return
         if return_attention_weights:
             return(prediction_out, [word_weights, sentence_weights])
         else:
             return(prediction_out)
-    
-    def init_hidden_sent(self):
-            return Variable(torch.zeros(2, self._batch_size, self._hidden_size_sent))
-    
-    def init_hidden_word(self):
-            return Variable(torch.zeros(2, self._batch_size, self._hidden_size_words))
 
