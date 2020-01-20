@@ -11,6 +11,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 import torch.nn as nn
 from sklearn import metrics
+from skorch.net import NeuralNet
     
 # Load FastText embedding
 def load_FT(path, word_index, embedding_dim, vocab_size, init_random_missing = False):
@@ -94,13 +95,16 @@ class ClassificationPipeline(object):
         # Pad
         self._seqs_cap = preprocessing.sequence.pad_sequences(seqs, maxlen=self._max_seq_len)
         # Predict
-        with torch.no_grad():
-          self._model.eval()
-          yhat_test = self._model(torch.tensor(self._seq_seq).type(torch.long))
+        if type(self._model) == NeuralNet:
+          yhat_test = self._model.predict(torch.tensor(self._seqs_cap).type(torch.long))
+        else:
+          with torch.no_grad():
+            self._model.eval()
+            yhat_test = self._model(torch.tensor(self._seqs_cap).type(torch.long))
         # Predict
-        prob, yhat_class = yhat_test.max(axis=1) 
+        yhat_class = yhat_test.argmax(axis=1) 
         # Return
-        return(prob, yhat_class)
+        return(yhat_test.squeeze()[yhat_class], yhat_class)
         
 # Load tokenizer
 def load_tokenizer(path):
