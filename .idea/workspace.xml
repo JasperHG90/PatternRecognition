@@ -2,11 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="aa9f6f31-d7bf-494e-8d78-060984a7cdc0" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/2_baseline_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/2_baseline_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/5_han_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/5_han_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/HAN.py" beforeDir="false" afterPath="$PROJECT_DIR$/HAN.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluate_HAN_results.R" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate_HAN_results.R" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -16,11 +12,11 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/2_baseline_model.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1790">
-              <caret line="339" selection-start-line="339" selection-end-line="339" />
+            <state relative-caret-position="454">
+              <caret line="356" column="14" selection-start-line="356" selection-start-column="14" selection-end-line="356" selection-end-column="14" />
               <folding>
                 <element signature="e#19#31#0" expanded="true" />
               </folding>
@@ -28,11 +24,14 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/5_han_model.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-4947">
-              <caret line="3" column="92" selection-start-line="3" selection-start-column="92" selection-end-line="3" selection-end-column="92" />
+            <state relative-caret-position="97">
+              <caret line="273" selection-start-line="273" selection-end-line="275" selection-end-column="53" />
+              <folding>
+                <element signature="e#120#199#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -40,7 +39,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/HAN.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="260">
+            <state relative-caret-position="-3694">
               <caret line="270" column="44" selection-start-line="270" selection-start-column="44" selection-end-line="270" selection-end-column="44" />
               <folding>
                 <element signature="e#548#560#0" expanded="true" />
@@ -87,9 +86,9 @@
       <list>
         <option value="$PROJECT_DIR$/.gitignore" />
         <option value="$PROJECT_DIR$/1_preprocess_raw_data.py" />
-        <option value="$PROJECT_DIR$/2_baseline_model.py" />
         <option value="$PROJECT_DIR$/HAN.py" />
         <option value="$PROJECT_DIR$/5_han_model.py" />
+        <option value="$PROJECT_DIR$/2_baseline_model.py" />
       </list>
     </option>
   </component>
@@ -193,12 +192,12 @@
       <workItem from="1579343591259" duration="15123000" />
       <workItem from="1579503102537" duration="23000" />
       <workItem from="1579593894900" duration="5853000" />
-      <workItem from="1579681324325" duration="5442000" />
+      <workItem from="1579681324325" duration="5514000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="85945000" />
+    <option name="totallyTimeSpent" value="86017000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="2576" height="1056" extended-state="6" />
@@ -218,15 +217,15 @@
       <window_info anchor="bottom" id="Version Control" order="8" />
       <window_info anchor="bottom" id="Database Changes" order="9" />
       <window_info anchor="bottom" id="Event Log" order="10" side_tool="true" />
-      <window_info anchor="bottom" id="Terminal" order="11" weight="0.3288889" />
-      <window_info active="true" anchor="bottom" id="Python Console" order="12" visible="true" weight="0.31777778" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="11" visible="true" weight="0.3288889" />
+      <window_info anchor="bottom" id="Python Console" order="12" weight="0.31777778" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
-      <window_info anchor="right" id="SciView" order="3" sideWeight="0.49674267" visible="true" weight="0.3298887" />
+      <window_info anchor="right" id="SciView" order="3" sideWeight="0.49668875" visible="true" weight="0.3298887" />
       <window_info anchor="right" id="R Graphics" order="4" />
       <window_info anchor="right" id="R Packages" order="5" />
-      <window_info anchor="right" x="0" y="0" width="594" height="856" id="Documentation" order="6" sideWeight="0.50325733" side_tool="true" visible="true" weight="0.3298887" />
+      <window_info anchor="right" x="0" y="0" width="594" height="856" id="Documentation" order="6" sideWeight="0.5033113" side_tool="true" visible="true" weight="0.3298887" />
       <window_info anchor="right" id="Database" order="7" />
     </layout>
   </component>
@@ -300,19 +299,9 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/2_baseline_model.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1790">
-          <caret line="339" selection-start-line="339" selection-end-line="339" />
-          <folding>
-            <element signature="e#19#31#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/HAN.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="260">
+        <state relative-caret-position="-3694">
           <caret line="270" column="44" selection-start-line="270" selection-start-column="44" selection-end-line="270" selection-end-column="44" />
           <folding>
             <element signature="e#548#560#0" expanded="true" />
@@ -322,8 +311,21 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/5_han_model.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-4947">
-          <caret line="3" column="92" selection-start-line="3" selection-start-column="92" selection-end-line="3" selection-end-column="92" />
+        <state relative-caret-position="97">
+          <caret line="273" selection-start-line="273" selection-end-line="275" selection-end-column="53" />
+          <folding>
+            <element signature="e#120#199#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/2_baseline_model.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="454">
+          <caret line="356" column="14" selection-start-line="356" selection-start-column="14" selection-end-line="356" selection-end-column="14" />
+          <folding>
+            <element signature="e#19#31#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
