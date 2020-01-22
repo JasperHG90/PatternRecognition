@@ -174,11 +174,11 @@ def LSTMN_search(parameters):
 
 # Define the search space
 space = {
-    'nb_lstm_units': hp.choice('nb_lstm_units', [32]),#,64,128]),
-    'nb_lstm_layers': hp.choice('nb_lstm_layers', [1]),#,2,3]),
-    'bidirectional': hp.choice('bidirectional', [False]),#, True]),
-    'sent_length': hp.choice("sent_length", [8]),#, 10, 12, 15]),
-    'use_class_weights': hp.choice("use_class_weights", [True]),#, False]),
+    'nb_lstm_units': hp.choice('nb_lstm_units', [32,64,128]),
+    'nb_lstm_layers': hp.choice('nb_lstm_layers', [1,2,3]),
+    'bidirectional': hp.choice('bidirectional', [False, True]),
+    'sent_length': hp.choice("sent_length", [8, 10, 12, 15]),
+    'use_class_weights': hp.choice("use_class_weights", [True, False]),
     'learning_rate': hp.loguniform('learning_rate', np.log(0.001), np.log(0.03)),
     'dropout_prop': hp.uniform("dropout", 0, 0.5)
 }
@@ -214,24 +214,28 @@ with open(args.out_file, 'w') as of_connection:
 # Optimize
 import datetime
 begin = datetime.datetime.now()
+
 best = fmin(fn = LSTMN_search, space = space, algo = tpe.suggest,
             max_evals = args.max_evals, trials = bayes_trials)
+
 finish = datetime.datetime.now()
+t_spent = begin-finish
 print("began at: " + begin.strftime("%Y-%m-%d %H:%M"))
-print("finished at: " + finish.strftime("%Y-%m-%d %H:%M"))
+print("ended at: " + finish.strftime("%Y-%m-%d %H:%M"))
+print("total time: " + str(t_spent))
 
 #%% Train LSTMN on best parameters and train data
 
-max_sent_length = 10
+max_sent_length = 15
 
 # Load data for the sentence length
 sent_length = max_sent_length
 
-with open("tokenizers/tokenizer_S{}.pickle".format(sent_length), "rb") as inFile:
+with open("data/HAN/tokenizer_S{}.pickle".format(sent_length), "rb") as inFile:
     tokenizer = pickle.load(inFile)
-with open("embeddings/HAN_embeddings_S{}.pickle".format(sent_length), "rb") as inFile:
+with open("data/HAN/HAN_embeddings_S{}.pickle".format(sent_length), "rb") as inFile:
     FTEMB = torch.tensor(pickle.load(inFile)).to(device)
-with open("tokenizers/data_S{}.pickle".format(sent_length), "rb") as inFile:
+with open("data/HAN/data_S{}.pickle".format(sent_length), "rb") as inFile:
     data = pickle.load(inFile)
 # Unpack
 docs_vectorized = data["docs_vectorized"]
@@ -239,16 +243,17 @@ labels_vect = data["labels_vectorized"]
 idx_to_label = data["idx_to_label"]
 label_to_idx = data["labels_to_idx"]
 
-best = Namespace( ###########################################################################################################
-    nb_lstm_units = 32,
-    nb_lstm_layers = 1,
-    bidirectional = False,
-    use_class_weights = True,
-    batch_size = 128,
-    num_classes = len(np.unique(labels_vect)),
-    learning_rate = 0.01105,
-    epochs = 6
-)
+best = { ###########################################################################################################
+    "bidirectional" : True,
+    "dropout_prop" : 0.17665639259474208,
+    "learning_rate" : 0.02318120952027118,
+    "nb_lstm_units" : 64,
+    "nb_lstm_layers" : 3,
+    "use_class_weights" : True,
+    "batch_size" : 128,
+    "num_classes" : len(np.unique(labels_vect)),
+    "epochs" : 9
+}
 
 # Split
 train, val = split_data(docs_vectorized, labels_vect, 6754, p=0.05)

@@ -273,7 +273,10 @@ class LSTMN(nn.Module):
 
         # when the model is bidirectional we double the output dimension
         if bidirectional:
-            self.lstm
+            self.num_directions = 2
+        else:
+            self.num_directions = 1
+        self.bidirectional = bidirectional
         
         # Embedding
         self.embedding = Embedding_FastText(weights, freeze_layer = True)
@@ -282,7 +285,8 @@ class LSTMN(nn.Module):
         self.lstm = nn.LSTM(
             input_size=self.embedding_dim[1], 
             hidden_size=self.nb_lstm_units,
-            num_layers=self.nb_lstm_layers
+            num_layers=self.nb_lstm_layers,
+            bidirectional = self.bidirectional
         )
 
         # output layer which projects back to tag space
@@ -296,11 +300,11 @@ class LSTMN(nn.Module):
 		# reset the LSTM hidden state. Must be done before you run a new batch. Otherwise the LSTM will treat
         # a new batch as a continuation of a sequence
         if batch_size is None:
-            h_0 = Variable(torch.zeros(self.nb_lstm_layers, self.batch_size, self.nb_lstm_units).cuda()) # Initial hidden state of the LSTM
-            c_0 = Variable(torch.zeros(self.nb_lstm_layers, self.batch_size, self.nb_lstm_units).cuda()) # Initial cell state of the LSTM
+            h_0 = Variable(torch.zeros(self.nb_lstm_layers * self.num_directions, self.batch_size, self.nb_lstm_units).cuda()) # Initial hidden state of the LSTM
+            c_0 = Variable(torch.zeros(self.nb_lstm_layers * self.num_directions, self.batch_size, self.nb_lstm_units).cuda()) # Initial cell state of the LSTM
         else:
-            h_0 = Variable(torch.zeros(self.nb_lstm_layers, batch_size, self.nb_lstm_units).cuda())
-            c_0 = Variable(torch.zeros(self.nb_lstm_layers, batch_size, self.nb_lstm_units).cuda())
+            h_0 = Variable(torch.zeros(self.nb_lstm_layers * self.num_directions, batch_size, self.nb_lstm_units).cuda())
+            c_0 = Variable(torch.zeros(self.nb_lstm_layers * self.num_directions, batch_size, self.nb_lstm_units).cuda())
         output, (final_hidden_state, final_cell_state) = self.lstm(torch.squeeze(embedded), (h_0, c_0))
         
         # Apply dropout
