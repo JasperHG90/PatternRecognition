@@ -351,3 +351,7 @@ ytrue = test.y
 from sklearn import metrics
 print(metrics.classification_report(ytrue, yhatc, target_names=list(category_map.values())))
 metrics.confusion_matrix(ytrue, yhatc)
+
+#%% Save model
+
+net.save_params(f_params='models/baselineNN.pkl')
