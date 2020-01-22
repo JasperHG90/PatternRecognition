@@ -80,4 +80,6 @@ ggplot(hparams_processed, aes(x=learning_rate, y = loss)) +
   geom_point() +
   geom_smooth()
 
+ggplot(hparams_processed, aes(x=dropout_prop)) +
+  geom_density()
 
