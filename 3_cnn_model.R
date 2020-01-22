@@ -2,6 +2,7 @@
 library(keras)
 library(tidyverse)
 library(rBayesianOptimization)
+library(yardstick)
 
 
 ####1.Read Data####
@@ -100,60 +101,25 @@ for (word in names(word_index)) {
 dim(embedding_matrix)
 
 
-####5.Single CNN#####
-model_cnn <- keras_model_sequential() %>% 
-  layer_embedding(input_dim = max_words, output_dim = embedding_dim,
-                  input_length = maxlen) %>% 
-  layer_conv_1d(filters = 512, kernel_size = 10, use_bias = FALSE) %>%
-  layer_batch_normalization() %>% 
-  layer_activation("relu") %>% 
-  layer_global_max_pooling_1d() %>%
-  layer_dense(units = 512, activation = 'relu',
-              kernel_regularizer = regularizer_l2(l = 0.001)) %>%
-  layer_dropout(rate = .1) %>%
-  layer_dense(units = 11, activation = "softmax")
-
-summary(model_cnn)
-
-get_layer(model_cnn, index = 1) %>% 
-  set_weights(list(embedding_matrix)) %>% 
-  freeze_weights()
-
-model_cnn %>%  compile(
-  optimizer = optimizer_adam(lr = 0.001, beta_1 = 0.9, beta_2 = 0.999),
-  loss = "categorical_crossentropy",
-  metrics = c("accuracy")
-)
 
 
-history_cnn <- model_cnn %>% fit(
-  x_train, y_train_one_hot,
-  epochs = 10,
-  batch_size = 128,
-  validation_split = 0.2,
-  shuffle = TRUE,
-  class_weight = as.list(class_weights)
-)
+####Read new data####
+x_train <- read_rds("./data/other/Qixiang/train_x.rds")
+y_train <- read_rds("./data/other/Qixiang/train_y.rds")
+x_test <- read_rds("./data/other/Qixiang/test_x.rds")
+y_test <- read_rds("./data/other/Qixiang/test_y.rds")
 
-results_cnn <- model_cnn %>% evaluate(x_test, y_test_one_hot, verbose = 0)
-results_cnn
+y_train_one_hot <- to_categorical(y_train)
+y_test_one_hot <- to_categorical(y_test)
 
-#check out category-specific performance
-prediction_cnn <- model_cnn %>% predict(x_test) %>% 
-  apply(1, which.max)
+class_weights <- prod(table(y_train))/table(y_train)/(10^29)
 
-prediction_cnn <- prediction_cnn - 1
+embedding_matrix <- read_rds("./data/other/Qixiang/embedding_matrix.rds")
+embedding_dim <- 300
+max_words <- 20000
+maxlen <- 158
 
-label_acc <- numeric()
 
-for (i in 0:10) {
-  label_index <- y_test == i
-  acc <- sum(prediction_cnn[label_index] == y_test[label_index])/length(y_test[label_index])
-  label_acc <- append(label_acc, acc)
-  
-}
-
-label_acc
 
 ####5.Bayesian Optimization for Parameter Search####
 #parameters: filter_n, filter_size, neuron_n, dropout
@@ -223,16 +189,98 @@ maximizeACC = function(filter_n, filter_size, neuron_n, dropout) {
 }
 
 #define parameter bounds
-boundsParams = list(filter_n = c(128L, 512L), filter_size = c(1L, 10L), neuron_n = c(32L, 512L), dropout = c(0, 0.1))
+boundsParams = list(filter_n = c(128L, 512L), filter_size = c(1L, 20L), neuron_n = c(32L, 512L), dropout = c(0, 0.2))
 
 Final_calibrated = BayesianOptimization(maximizeACC, bounds = boundsParams, 
                                         init_grid_dt = as.data.frame(boundsParams), 
-                                        init_points = 10, n_iter = 30, acq = "ucb", 
+                                        init_points = 10, n_iter = 100, acq = "ucb", 
                                         kappa = 2.576, eps = 0, verbose = TRUE)
 
 
 
 tail(Final_calibrated$History)
+Final_calibrated$Best_Value
+
+saveRDS(Final_calibrated, "Final_calibrated.rds")
 
 #best model performance: accuracy 86.7%
-#with parameters: filter_n = 512, filter_size =10, neuron_n = 512, dropout = 0.1
+#with parameters: Round = 82	filter_n = 512.0000	filter_size = 4.0000	neuron_n = 512.0000	dropout = 0.0007	Value = 0.910
+
+
+
+
+####6.Final CNN Model#####
+model_cnn <- keras_model_sequential() %>% 
+  layer_embedding(input_dim = max_words, output_dim = embedding_dim,
+                  input_length = maxlen) %>% 
+  layer_conv_1d(filters = 512, kernel_size = 4, use_bias = FALSE) %>%
+  layer_batch_normalization() %>% 
+  layer_activation("relu") %>% 
+  layer_global_max_pooling_1d() %>%
+  layer_dense(units = 512, activation = 'relu',
+              kernel_regularizer = regularizer_l2(l = 0.001)) %>%
+  layer_dropout(rate = 0.0007) %>%
+  layer_dense(units = 11, activation = "softmax")
+
+summary(model_cnn)
+
+get_layer(model_cnn, index = 1) %>% 
+  set_weights(list(embedding_matrix)) %>% 
+  freeze_weights()
+
+model_cnn %>%  compile(
+  optimizer = optimizer_adam(lr = 0.001, beta_1 = 0.9, beta_2 = 0.999),
+  loss = "categorical_crossentropy",
+  metrics = c("accuracy")
+)
+
+
+history_cnn <- model_cnn %>% fit(
+  x_train, y_train_one_hot,
+  epochs = 10,
+  batch_size = 128,
+  #validation_split = 0.2,
+  shuffle = TRUE,
+  class_weight = as.list(class_weights)
+)
+
+model_cnn %>% 
+  saveRDS("model_cnn.rds")
+
+
+#accuracy score on the test set
+results_cnn <- model_cnn %>% evaluate(x_test, y_test_one_hot, verbose = 0)
+results_cnn
+
+
+
+#check out category-specific performance
+prediction_cnn <- model_cnn %>% predict(x_test) %>% 
+  apply(1, which.max)
+
+prediction_cnn <- prediction_cnn - 1
+
+label_acc <- numeric()
+
+for (i in 0:10) {
+  label_index <- y_test == i
+  acc <- sum(prediction_cnn[label_index] == y_test[label_index])/length(y_test[label_index])
+  label_acc <- append(label_acc, acc)
+  
+}
+
+label_acc
+
+
+#check out accuracy f1 score, precision, recall
+tibble(obs = as.factor(y_test), pred = as.factor(prediction_cnn)) %>% 
+  accuracy(truth = obs, estimate = pred)
+
+tibble(obs = as.factor(y_test), pred = as.factor(prediction_cnn)) %>% 
+  precision(truth = obs, estimate = pred)
+
+tibble(obs = as.factor(y_test), pred = as.factor(prediction_cnn)) %>% 
+  recall(truth = obs, estimate = pred)
+
+tibble(obs = as.factor(y_test), pred = as.factor(prediction_cnn)) %>% 
+  f_meas(truth = obs, estimate = pred)
