@@ -63,8 +63,16 @@ rp = np.random.permutation(y.shape[0])
 X = X[rp,:]
 y = y[rp]
 
+# Also for test
+Xt, yt = input_data["test_x"], np.array(input_data["test_y"])
+np.random.seed(6666)
+rpt = np.random.permutation(yt.shape[0])
+Xt = Xt[rpt,:]
+yt = yt[rpt]
+
 # To wikidata class
 WD = WikiData(train_x, train_y)
+test = WikiData(input_data["test_x"], input_data["test_y"])
 
 #%% One-layer NN with softmax on top
 
@@ -256,8 +264,10 @@ with open(args.out_file, 'w') as of_connection:
 best = fmin(fn = baselineNN_search, space = space, algo = tpe.suggest,
             max_evals = args.max_evals, trials = bayes_trials)
 
-#%%
+#%% Fit on train & test
 
+import skorch
+from sklearn import metrics
 from skorch import NeuralNet
 from skorch.dataset import CVSplit
 
@@ -309,13 +319,25 @@ net = NeuralNet(
 # Verbose to false
 net.verbose = 1
 
-# Split into train/test
-train,test = split(WD, val_prop=0.1, seed=553344)
-
 # Fit
-io = net.fit(train)
+io = net.fit(WD)
 
 #%% Predict on train
+
+# Out
+yhat = net.predict(WD)
+# Classes
+yhatc = yhat.argmax(axis=1)
+# True labels
+ytrue = WD.y
+(ytrue == yhatc).sum() / yhatc.size
+
+# Classification report
+from sklearn import metrics
+print(metrics.classification_report(ytrue, yhatc, target_names=list(category_map.values())))
+metrics.confusion_matrix(ytrue, yhatc)
+
+#%% Predict on test
 
 # Out
 yhat = net.predict(test)

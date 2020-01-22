@@ -24,7 +24,7 @@ from sklearn import metrics
 # This is a technical thing
 # See stackoverflow:
 #   - PyTorch: training with GPU gives worse error than training the same thing with CPU
-torch.backends.cudnn.enabled = False
+#torch.backends.cudnn.enabled = False
 
 """
 HAN utility functions:
@@ -174,7 +174,11 @@ def train_han(X, y, model, optimizer, criterion, epochs = 10,
         batch_val_data = WikiDocData(batch_val[0], batch_val[1])
         # For each train/test example
         for i in range(n_examples // batch_size):
+            # Set model to train
             model.train()
+            # Init the hidden states
+            hid_state_word = model.init_hidden_word()
+            hid_state_sent = model.init_hidden_sent()
             # Draw a batch
             current_batch = batcher(batch_train_data, batch_size)
             # Process input batches
@@ -187,7 +191,7 @@ def train_han(X, y, model, optimizer, criterion, epochs = 10,
             # Zero gradients
             model.zero_grad()
             # Predict output
-            predict_out = model(seqs, torch.tensor(lens).type(torch.long).to(device))
+            predict_out = model(seqs, torch.tensor(lens).type(torch.long).to(device), hid_state_word.to(device), hid_state_sent.to(device))
             # Get max
             predict_class = torch.argmax(predict_out, dim=1).cpu().numpy()
             # Loss
@@ -212,15 +216,20 @@ def train_han(X, y, model, optimizer, criterion, epochs = 10,
         training_acc.append(running_acc)
         # On validation data
         with torch.no_grad():
+            # Set model to evaluation mode
             model.eval()
+            # Get batches
             io = batcher(batch_val_data, len(batch_val_data.X))
+            # Init the hidden states
+            hidden_state_word = model.init_hidden_word()
+            hidden_state_sent = model.init_hidden_sent()
             # Process true label
             ytrue = [doc[1] for doc in io]
             ytrue = torch.tensor(ytrue).to(device)
             # Process batches
             seqs, lens = process_batch(io, device = device)
             # To outcome probabilities
-            out = model(seqs, lens)
+            out = model(seqs, lens, hidden_state_word.to(device), hidden_state_sent.to(device))
             loss_out = criterion(out, ytrue)
             # To class labels
             out = torch.argmax(out, dim=1)
@@ -252,6 +261,54 @@ def train_han(X, y, model, optimizer, criterion, epochs = 10,
                    "validation_precision":validation_precision,
                    "validation_recall":validation_recall,
                    "validation_f1":validation_f1})
+
+def predict_HAN(model, dataset, batch_size = 128, device = "cpu"):
+    """
+    Create predictions for a HAN
+
+    :param model: HAN model
+    :param dataset: WikiDocData dataset
+    :param batch_size: size of the input batches to the model
+    :param device: device on which the model is run
+    :return: tuple containing predictions and ground truth labels
+    """
+    n = len(dataset.X)
+    total = n // batch_size
+    remainder = n % batch_size
+    # Make indices
+    idx = []
+    start_idx = 0
+    for batch_idx in range(1, total+1):
+        idx.append((start_idx, batch_idx * batch_size))
+        start_idx += batch_size
+    # If remainder
+    if remainder > 0:
+        idx.append((start_idx, start_idx + remainder))
+    # For each pair, predict
+    predictions = []
+    ground_truth = []
+    for start_idx, stop_idx in idx:
+        # Get batch
+        inbatch = [dataset.__getitem__(idx) for idx in range(start_idx, stop_idx)]
+        # Process batch
+        seqs, lens = process_batch(inbatch, device = device)
+        # Init hidden states
+        hidden_state_word = model.init_hidden_word().to(device)
+        hidden_state_sent = model.init_hidden_sent().to(device)
+        # Predict
+        with torch.no_grad():
+            model.eval()
+            probs = model(seqs, lens, hidden_state_word, hidden_state_sent, return_attention_weights=False)
+        # To classes
+        out = torch.argmax(probs, dim=1).cpu().numpy()
+        # Get true label
+        ytrue = [batch[1] for batch in inbatch]
+        ytrue = torch.tensor(ytrue).cpu().numpy()
+        # Cat together
+        predictions.append(out)
+        ground_truth.append(ytrue)
+    # Stack predictions & ground truth
+    return(np.hstack(predictions), np.hstack(ground_truth))
 
 """
 PyTorch modules:
@@ -326,7 +383,7 @@ class word_encoder(nn.Module):
                         bidirectional=True, batch_first=True)       
         # Attention
         self.attention = Attention(self._hidden_size)
-    def forward(self, inputs_embedded):
+    def forward(self, inputs_embedded, hid_state):
         """
         :param inputs_embedded: word embeddings of the mini batch at time t (sentence x seq_length)
 
@@ -361,7 +418,7 @@ class sentence_encoder(nn.Module):
                           bidirectional=True, batch_first=True)       
         # Attention
         self.attention = Attention(hidden_size)
-    def forward(self, encoder_output):
+    def forward(self, encoder_output, hid_state):
         """
         :param encoder_output: output of the word encoder.
 
@@ -404,7 +461,7 @@ class HAN(nn.Module):
         self._sentence_encoder = sentence_encoder(self._hidden_size_words * 2, self._hidden_size_sent)
         # Set up a linear layer
         self._linear1 = nn.Linear(self._hidden_size_sent * 2, self._num_classes)
-    def forward(self, seqs, seq_lens, return_attention_weights = False):
+    def forward(self, seqs, seq_lens, hid_state_word, hid_state_sent, return_attention_weights = False):
         """
         :param batch_in: list of input documents of size batch_size input document with dim (sentence x seq_length)
         :param return_attention_weights: if True, return attention weights
@@ -426,14 +483,14 @@ class HAN(nn.Module):
             x_packed = pack_padded_sequence(embedded, seq_len, batch_first=True, 
                                             enforce_sorted=False)
             # Word encoder
-            we_out, hid_state = self._word_encoder(x_packed)
+            we_out, hid_state = self._word_encoder(x_packed, hid_state_word)
             # Cat sentences together
             if batched_sentences is None:
                 batched_sentences = we_out
             else:
                 batched_sentences = torch.cat((batched_sentences, we_out), 0)
                 # Sentence encoder
-                out_sent, hid_sent = self._sentence_encoder(batched_sentences.permute(1,0,2))
+                out_sent, hid_sent = self._sentence_encoder(batched_sentences.permute(1,0,2), hid_state_sent)
             # Cat the attention weights
             if return_attention_weights:
                 word_weights.append(hid_state[1].data)
@@ -448,4 +505,10 @@ class HAN(nn.Module):
             return(prediction_out, [word_weights, sentence_weights])
         else:
             return(prediction_out)
+
+    def init_hidden_sent(self):
+        return Variable(torch.zeros(2, self._batch_size, self._hidden_size_sent))
+
+    def init_hidden_word(self):
+        return Variable(torch.zeros(2, self._batch_size, self._hidden_size_words))
 
