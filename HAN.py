@@ -1,4 +1,4 @@
-## Implementation of a Hierarchical Attention Network (HAN)
+#%% Implementation of a Hierarchical Attention Network (HAN)
 ##
 ## This implementation is based on the following paper
 ##
@@ -263,7 +263,7 @@ def train_han(X, y, model, optimizer, criterion, epochs = 10,
                    "validation_recall":validation_recall,
                    "validation_f1":validation_f1})
 
-def predict_HAN(model, dataset, batch_size = 128, device = "cpu"):
+def predict_HAN(model, dataset, batch_size = 128, return_probabilities = False, device = "cpu"):
     """
     Create predictions for a HAN
 
@@ -288,6 +288,7 @@ def predict_HAN(model, dataset, batch_size = 128, device = "cpu"):
     # For each pair, predict
     predictions = []
     ground_truth = []
+    probs_pred = []
     for start_idx, stop_idx in idx:
         # Get batch
         inbatch = [dataset.__getitem__(idx) for idx in range(start_idx, stop_idx)]
@@ -308,8 +309,12 @@ def predict_HAN(model, dataset, batch_size = 128, device = "cpu"):
         # Cat together
         predictions.append(out)
         ground_truth.append(ytrue)
+        probs_pred.append(probs.cpu().numpy())
     # Stack predictions & ground truth
-    return(np.hstack(predictions), np.hstack(ground_truth))
+    if not return_probabilities:
+        return(np.hstack(predictions), np.hstack(ground_truth))
+    else:
+        return(np.hstack(predictions), np.concatenate(probs_pred, axis=0), np.hstack(ground_truth))
 
 """
 PyTorch modules:

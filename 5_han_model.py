@@ -276,7 +276,7 @@ print(metrics.classification_report(ytruth, yhat, target_names = list(label_to_i
 
 #%% Get predictions for test data
 
-yhat, ytruth = predict_HAN(model=WikiHAN_out, dataset=test, batch_size=128, device = device)
+yhat, yprob, ytruth = predict_HAN(model=WikiHAN_out, dataset=test, batch_size=128, return_probabilities=True, device = device)
 
 # Print classification report
 print(metrics.classification_report(ytruth, yhat, target_names = list(label_to_idx.keys())))
@@ -287,6 +287,11 @@ import pandas as pd
 out_preds = pd.DataFrame({"yhat": yhat, "ytrue":ytruth})
 # Save
 out_preds.to_csv("predictions/HAN.csv", index=False)
+
+#%% Save probabilities
+
+out_probs = pd.DataFrame(yprob)
+out_probs.to_csv("predictions/HAN_probs.csv", index = False)
 
 # %% Preprocess attention weights
 

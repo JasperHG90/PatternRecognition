@@ -367,3 +367,8 @@ import pandas as pd
 out_preds = pd.DataFrame({"yhat": yhatc, "ytrue":ytrue})
 # Save
 out_preds.to_csv("predictions/baseline.csv", index=False)
+
+#%% Save probabilities
+
+probs_out = pd.DataFrame(yhat)
+probs_out.to_csv("predictions/baseline_probs.csv", index=False)
