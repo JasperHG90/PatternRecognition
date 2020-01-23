@@ -1,7 +1,7 @@
 #%% This script preprocesses the wikipedia data and trains the HAN.
 # The HAN utility functions can be found in HAN.py
 
-from HAN import HAN, WikiDocData, split_data, train_han, batcher, process_batch
+from HAN import HAN, WikiDocData, split_data, train_han, batcher, process_batch, predict_HAN
 import pickle
 import numpy as np
 import os
@@ -50,7 +50,7 @@ args = Namespace(
 
 #%% Load the data for one of the sentence lengths
 
-sent_length = 10
+sent_length = 15
 
 # Load
 with open(args.data_files_map[sent_length]["tokenizer"], "rb") as inFile:
@@ -206,37 +206,34 @@ best = fmin(fn = HAN_search, space = space, algo = tpe.suggest,
 
 #%% Train HAN on best parameters and train data
 
-max_sent_length = 10
+sent_length = 15
 
-# Load data for the sentence length
-sent_length = max_sent_length
-with open("tokenizers/tokenizer_S{}.pickle".format(sent_length), "rb") as inFile:
+# Load
+with open(args.data_files_map[sent_length]["tokenizer"], "rb") as inFile:
     tokenizer = pickle.load(inFile)
-with open("embeddings/HAN_embeddings_S{}.pickle".format(sent_length), "rb") as inFile:
+with open(args.data_files_map[sent_length]["embedding"], "rb") as inFile:
     FTEMB = torch.tensor(pickle.load(inFile)).to(device)
-with open("tokenizers/data_S{}.pickle".format(sent_length), "rb") as inFile:
+with open(args.data_files_map[sent_length]["input_data"], "rb") as inFile:
     data = pickle.load(inFile)
 # Unpack
-docs_vectorized = data["docs_vectorized"]
+train_x, train_y = data["train_x"], data["train_y"]
 labels_vect = data["labels_vectorized"]
 idx_to_label = data["idx_to_label"]
 label_to_idx = data["labels_to_idx"]
 
+# Best parameters
 best = Namespace(
+    dropout_prop = 0.165,
     hidden_size = 64,
     use_class_weights = True,
     batch_size = 128,
     num_classes = len(np.unique(labels_vect)),
-    learning_rate = 0.01105,
-    epochs = 6
+    learning_rate = 0.007472,
+    epochs = 9
 )
 
-# Split
-train, val = split_data(docs_vectorized, labels_vect, 6754, p=0.05)
-# Make dataset
-test = WikiDocData(val[0], val[1])
 # Set up the model
-WikiHAN = HAN(FTEMB, best.hidden_size, best.hidden_size, best.batch_size, best.num_classes)
+WikiHAN = HAN(FTEMB, best.hidden_size, best.hidden_size, best.batch_size, best.num_classes, dropout_prop=best.dropout_prop)
 # To cuda
 WikiHAN.to(device)
 # Set up optimizer
@@ -247,55 +244,56 @@ if best.use_class_weights:
 else:
     criterion = nn.CrossEntropyLoss()
 
-# Training routine
-WikiHAN_out, history = train_han(train[0], train[1], WikiHAN, optimizer, criterion,
+#%% Training routine
+WikiHAN_out, history = train_han(train_x, train_y, WikiHAN, optimizer, criterion,
                                 epochs = best.epochs, val_split = 0.1, batch_size = best.batch_size,
                                 device = device)
 
-#%% Evaluate the model on test data
-
-# For now, just make a single batch of the test data for evaluation
-valbatch = batcher(test, len(test.X))
-
-# Preprocess
-seqs, lens = process_batch(valbatch, device = device)
-
-# Predict
-with torch.no_grad():
-    WikiHAN_out.eval()
-    probs = WikiHAN_out(seqs, lens)
-
-# %% Classes
-
-# To classes
-out = torch.argmax(probs, dim=1).cpu().numpy()
-
-# Get true label
-ytrue = [batch[1] for batch in valbatch]
-ytrue = torch.tensor(ytrue).cpu().numpy()
-
-# Accuracy
-print(sum(out == ytrue)/len(out))
-
-#%% Print classification report
-
-# Print classification report
-print(metrics.classification_report(ytrue, out, target_names = list(label_to_idx.keys())))
-
-#%% Save model
+# Save model
 
 torch.save(WikiHAN_out.state_dict(), "models/HAN.pt")
 
-# %% Get attention weights
+#%% Or load from existing model
 
-# Predict
-with torch.no_grad():
-    WikiHAN_out.eval()
-    probs, attn = WikiHAN_out(seqs, lens, return_attention_weights = True)
+WikiHAN.load_state_dict(torch.load("models/HAN.pt", map_location=torch.device(device)))
+#%%
+WikiHAN_out = WikiHAN
 
-# %% Preprocess attention weights
+#%% Make datasets to get accuracy etc.
 
-word_weights, sent_weights = attn
+test_x, test_y = data["test_x"], data["test_y"]
+
+# To dataset
+test = WikiDocData(test_x, test_y)
+train= WikiDocData(train_x, train_y)
+
+#%% Get predictions for train data
+
+yhat, ytruth = predict_HAN(model=WikiHAN_out, dataset=train, batch_size=128, device = device)
+
+# Print classification report
+print(metrics.classification_report(ytruth, yhat, target_names = list(label_to_idx.keys())))
+
+#%% Get predictions for test data
+
+yhat, yprob, ytruth = predict_HAN(model=WikiHAN_out, dataset=test, batch_size=128, return_probabilities=True, device = device)
+
+# Print classification report
+print(metrics.classification_report(ytruth, yhat, target_names = list(label_to_idx.keys())))
+
+#%% Save predictions
+
+import pandas as pd
+# Save
+out_preds.to_csv("predictions/HAN.csv", index=False)
+
+#%% Save probabilities
+
+out_probs = pd.DataFrame(yprob)
+out_probs.to_csv("predictions/HAN_probs.csv", index = False)
+#%% Save model
+
+torch.save(WikiHAN_out.state_dict(), "models/HAN.pt")
 word_weights = [we.cpu() for we in word_weights]
 sent_weights = [se.cpu() for se in sent_weights]
 print(len(word_weights))

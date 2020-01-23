@@ -45,13 +45,33 @@ library(ggExtra)
 library(tidyr)
 i <- hparams_processed %>%
   mutate(iteration = 1:n()) %>%
-  select(-quantilegrp) %>%
+  select(-quantilegrp, -loss,
+         -val_loss, -val_f1,
+         -val_acc) %>%
   gather(variable, value, -iteration) %>%
   ggplot(., aes(x=iteration, y =value, color = variable)) +
   geom_point() +
   geom_smooth(se = FALSE, color = "grey") +
   theme_bw() +
-  facet_wrap(.~ variable, nrow = 3, scales = "free_y")
+  theme(legend.position = "none") +
+  facet_wrap(.~ variable, nrow = 2, scales = "free_y")
+i
+
+i <- hparams_processed %>%
+  mutate(iteration = 1:n()) %>%
+  rename(train_loss = loss) %>%
+  select(iteration,
+         train_loss,
+         val_loss, 
+         val_f1,
+         val_acc) %>%
+  gather(variable, value, -iteration) %>%
+  ggplot(., aes(x=iteration, y =value, color = variable)) +
+  geom_point() +
+  geom_smooth(se = FALSE, color = "grey") +
+  theme_bw() +
+  theme(legend.position = "none") +
+  facet_wrap(.~ variable, nrow = 2, scales = "free_y")
 i
 
 # Learning rate
@@ -80,4 +100,6 @@ ggplot(hparams_processed, aes(x=learning_rate, y = loss)) +
   geom_point() +
   geom_smooth()
 
+ggplot(hparams_processed, aes(x=dropout_prop)) +
+  geom_density()
 
