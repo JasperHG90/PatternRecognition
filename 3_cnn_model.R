@@ -1,4 +1,7 @@
 rm(list=ls())
+#use model_cnn <- load_model_tf("model_cnn") to reload the saved cnn model
+#use Final_calibrated <- read_rds("Final_calibrated.rds") to check the hyperperameter tuning results
+#find in CNN_results.csv the model predictions vs truth
 
 #################################Start Here########################################
 library(keras)
@@ -79,7 +82,6 @@ training_credit = function(initParams){
 #initial parameters
 initParams = list(filter_n = 128, filter_size = 1, neuron_n = 32, dropout = 0)
 
-
 #function to search for parameters
 maximizeACC = function(filter_n, filter_size, neuron_n, dropout) {
   
@@ -106,7 +108,9 @@ Final_calibrated$Best_Value
 
 saveRDS(Final_calibrated, "Final_calibrated.rds")
 
-#best model performance: accuracy 86.7%
+
+
+#best model performance: accuracy 91.01%
 #with parameters: Round = 82	filter_n = 512.0000	filter_size = 4.0000	neuron_n = 512.0000	dropout = 0.0007	Value = 0.910
 
 ####6.Final CNN Model#####
@@ -135,6 +139,8 @@ model_cnn %>%  compile(
 )
 
 
+set.seed(6161138)
+
 history_cnn <- model_cnn %>% fit(
   x_train, y_train_one_hot,
   epochs = 10,
@@ -144,9 +150,7 @@ history_cnn <- model_cnn %>% fit(
   class_weight = as.list(class_weights)
 )
 
-model_cnn %>% 
-  saveRDS("model_cnn.rds")
-
+model_cnn %>% save_model_tf("model_cnn")
 
 #accuracy score on the test set
 results_cnn <- model_cnn %>% evaluate(x_test, y_test_one_hot, verbose = 0)
