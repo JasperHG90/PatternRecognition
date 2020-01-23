@@ -1,3 +1,5 @@
+rm(list=ls())
+
 #################################Start Here########################################
 library(keras)
 library(tidyverse)
@@ -107,9 +109,6 @@ saveRDS(Final_calibrated, "Final_calibrated.rds")
 #best model performance: accuracy 86.7%
 #with parameters: Round = 82	filter_n = 512.0000	filter_size = 4.0000	neuron_n = 512.0000	dropout = 0.0007	Value = 0.910
 
-
-
-
 ####6.Final CNN Model#####
 model_cnn <- keras_model_sequential() %>% 
   layer_embedding(input_dim = max_words, output_dim = embedding_dim,
@@ -160,6 +159,14 @@ prediction_cnn <- model_cnn %>% predict(x_test) %>%
   apply(1, which.max)
 
 prediction_cnn <- prediction_cnn - 1
+
+# Save
+write.csv(data.frame(ypred=prediction_cnn, ytrue = y_test), "CNN_results.csv", row.names = FALSE)
+
+library(reticulate)
+sklearn <- import("sklearn")
+rep <- sklearn$metrics$classification_report(prediction_cnn, y_train)
+cat(rep)
 
 label_acc <- numeric()
 
