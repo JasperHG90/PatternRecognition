@@ -284,7 +284,6 @@ print(metrics.classification_report(ytruth, yhat, target_names = list(label_to_i
 #%% Save predictions
 
 import pandas as pd
-out_preds = pd.DataFrame({"yhat": yhat, "ytrue":ytruth})
 # Save
 out_preds.to_csv("predictions/HAN.csv", index=False)
 
@@ -292,10 +291,9 @@ out_preds.to_csv("predictions/HAN.csv", index=False)
 
 out_probs = pd.DataFrame(yprob)
 out_probs.to_csv("predictions/HAN_probs.csv", index = False)
+#%% Save model
 
-# %% Preprocess attention weights
-
-word_weights, sent_weights = attn
+torch.save(WikiHAN_out.state_dict(), "models/HAN.pt")
 word_weights = [we.cpu() for we in word_weights]
 sent_weights = [se.cpu() for se in sent_weights]
 print(len(word_weights))
