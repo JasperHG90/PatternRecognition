@@ -1,4 +1,4 @@
-## Baseline model
+#%% Baseline model
 
 import torch
 import torch.nn as nn
@@ -319,8 +319,17 @@ net = NeuralNet(
 # Verbose to false
 net.verbose = 1
 
-# Fit
+#%% Fit the model
+
 io = net.fit(WD)
+
+# Save model
+net.save_params(f_params='models/baselineNN.pkl')
+
+#%% Or load it from disk
+
+net.initialize()
+net.load_params(f_params="models/baselineNN.pkl")
 
 #%% Predict on train
 
@@ -352,6 +361,9 @@ from sklearn import metrics
 print(metrics.classification_report(ytrue, yhatc, target_names=list(category_map.values())))
 metrics.confusion_matrix(ytrue, yhatc)
 
-#%% Save model
+#%% Save predictions
 
-net.save_params(f_params='models/baselineNN.pkl')
+import pandas as pd
+out_preds = pd.DataFrame({"yhat": yhatc, "ytrue":ytrue})
+# Save
+out_preds.to_csv("predictions/baseline.csv", index=False)

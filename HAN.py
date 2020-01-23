@@ -138,7 +138,8 @@ def train_han(X, y, model, optimizer, criterion, epochs = 10,
     Train a Hierarchical Attention Network
 
     :param X: input documents. Structured as a list of lists, where one entry is a list of input sentences.
-                all input sentences must be of the same size.
+                Note: documents can be different sizes in terms of length of sentences and number of sentences.
+                        both are padded.
     :param y: numpy array containing the output labels
     :param model: a HAN model.
     :param optimizer: optimizer used for gradient descent.

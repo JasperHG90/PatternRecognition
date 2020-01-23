@@ -244,10 +244,20 @@ if best.use_class_weights:
 else:
     criterion = nn.CrossEntropyLoss()
 
-# Training routine
+#%% Training routine
 WikiHAN_out, history = train_han(train_x, train_y, WikiHAN, optimizer, criterion,
                                 epochs = best.epochs, val_split = 0.1, batch_size = best.batch_size,
                                 device = device)
+
+# Save model
+
+torch.save(WikiHAN_out.state_dict(), "models/HAN.pt")
+
+#%% Or load from existing model
+
+WikiHAN.load_state_dict(torch.load("models/HAN.pt", map_location=torch.device(device)))
+#%%
+WikiHAN_out = WikiHAN
 
 #%% Make datasets to get accuracy etc.
 
@@ -271,9 +281,12 @@ yhat, ytruth = predict_HAN(model=WikiHAN_out, dataset=test, batch_size=128, devi
 # Print classification report
 print(metrics.classification_report(ytruth, yhat, target_names = list(label_to_idx.keys())))
 
-#%% Save model
+#%% Save predictions
 
-torch.save(WikiHAN_out.state_dict(), "models/HAN.pt")
+import pandas as pd
+out_preds = pd.DataFrame({"yhat": yhat, "ytrue":ytruth})
+# Save
+out_preds.to_csv("predictions/HAN.csv", index=False)
 
 # %% Preprocess attention weights
 
