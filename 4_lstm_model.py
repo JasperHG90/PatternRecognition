@@ -133,6 +133,10 @@ def LSTMN_search(parameters):
     labels_vect = data["labels_vectorized"]
     idx_to_label = data["idx_to_label"]
     label_to_idx = data["labels_to_idx"]
+    train, val = split_data(train_x, train_y, 6754, p=0.05)
+    train_x = train[0]
+    train_y = train[1]
+
     # Set up the model
     WikiLSTM = LSTMN(FTEMB,
                   args.batch_size,

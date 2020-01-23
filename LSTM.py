@@ -312,5 +312,5 @@ class LSTMN(nn.Module):
         # Linear layer
         final_output = self.hidden_to_label(final_hidden_state[-1]) # final_hidden_state.size() = (1, batch_size, hidden_size) & final_output.size() = (batch_size, output_size)
         # Softmax
-#        final_output = F.softmax(final_output, dim = 1)
+        final_output = F.softmax(final_output, dim = 1)
         return final_output
