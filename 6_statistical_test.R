@@ -20,8 +20,6 @@ MakeConfusionMatrix <- function(ypred, ytrue, num_classes, add_one = TRUE) {
   return(cmat)
 }
 
-library(caret)
-
 # Confusion matrices
 (BL_vCNN <- MakeConfusionMatrix(baseline_results$yhat, CNN_results$ypred, 11))
 (BL_vHAN <- MakeConfusionMatrix(baseline_results$yhat, HAN_results$yhat, 11))
@@ -32,3 +30,7 @@ library(DescTools)
 DescTools::StuartMaxwellTest(BL_vCNN)
 DescTools::StuartMaxwellTest(BL_vHAN)
 DescTools::StuartMaxwellTest(CNN_vHAN)
+
+library(reticulate)
+skl <- import("sklearn.metrics")
+cat(skl$classification_report(CNN_results$ypred, CNN_results$ytrue))

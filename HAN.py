@@ -263,7 +263,7 @@ def train_han(X, y, model, optimizer, criterion, epochs = 10,
                    "validation_recall":validation_recall,
                    "validation_f1":validation_f1})
 
-def predict_HAN(model, dataset, batch_size = 128, return_probabilities = False, device = "cpu"):
+def predict_HAN(model, dataset, batch_size = 128, return_probabilities = False, return_attention = False, device = "cpu"):
     """
     Create predictions for a HAN
 
@@ -300,7 +300,10 @@ def predict_HAN(model, dataset, batch_size = 128, return_probabilities = False, 
         # Predict
         with torch.no_grad():
             model.eval()
-            probs = model(seqs, lens, hidden_state_word, hidden_state_sent, return_attention_weights=False)
+            if return_attention:
+                probs, attn = model(seqs, lens, hidden_state_word, hidden_state_sent, return_attention_weights=True)
+            else:
+                probs = model(seqs, lens, hidden_state_word, hidden_state_sent, return_attention_weights=False)
         # To classes
         out = torch.argmax(probs, dim=1).cpu().numpy()
         # Get true label
@@ -311,10 +314,12 @@ def predict_HAN(model, dataset, batch_size = 128, return_probabilities = False, 
         ground_truth.append(ytrue)
         probs_pred.append(probs.cpu().numpy())
     # Stack predictions & ground truth
-    if not return_probabilities:
+    if not return_probabilities and not return_attention:
         return(np.hstack(predictions), np.hstack(ground_truth))
-    else:
+    elif return_probabilities:
         return(np.hstack(predictions), np.concatenate(probs_pred, axis=0), np.hstack(ground_truth))
+    else:
+        return(np.hstack(predictions), attn, np.hstack(ground_truth))
 
 """
 PyTorch modules:
