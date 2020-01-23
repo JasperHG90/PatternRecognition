@@ -48,7 +48,7 @@ args = Namespace(
 
 #%% Load the data for one of the sentence lengths
 
-sent_length = 10
+sent_length = 15
 
 # Load
 with open(args.data_files_map[sent_length]["tokenizer"], "rb") as inFile:
@@ -175,7 +175,7 @@ def LSTMN_search(parameters):
 # Define the search space
 space = {
     'nb_lstm_units': hp.choice('nb_lstm_units', [32,64,128]),
-    'nb_lstm_layers': hp.choice('nb_lstm_layers', [1,2,3]),
+    'nb_lstm_layers': hp.choice('nb_lstm_layers', [1,2]),
     'bidirectional': hp.choice('bidirectional', [False, True]),
     'sent_length': hp.choice("sent_length", [8, 10, 12, 15]),
     'use_class_weights': hp.choice("use_class_weights", [True, False]),
@@ -189,7 +189,7 @@ space = {
 from hyperopt.pyll.stochastic import sample
 parameters = sample(space)
 print(parameters)
-po = LSTMN_search(parameters)
+#po = LSTMN_search(parameters)
 
 #%% Run the optimizer
 
@@ -243,12 +243,14 @@ labels_vect = data["labels_vectorized"]
 idx_to_label = data["idx_to_label"]
 label_to_idx = data["labels_to_idx"]
 
+#%%
+
 best = { ###########################################################################################################
     "bidirectional" : True,
     "dropout_prop" : 0.17665639259474208,
     "learning_rate" : 0.02318120952027118,
     "nb_lstm_units" : 64,
-    "nb_lstm_layers" : 3,
+    "nb_lstm_layers" : 1,
     "use_class_weights" : True,
     "batch_size" : 128,
     "num_classes" : len(np.unique(labels_vect)),
@@ -256,24 +258,26 @@ best = { #######################################################################
 }
 
 # Split
-train, val = split_data(docs_vectorized, labels_vect, 6754, p=0.05)
+train, val = split_data(docs_vectorized_lstm, labels_vect, 6754, p=0.05)
 # Make dataset
 test = WikiDocData(val[0], val[1])
 # Set up the model
-WikiLSTM = LSTMN(FTEMB, best.hidden_size, best.hidden_size, best.batch_size, best.num_classes)
+WikiLSTM = LSTMN(FTEMB, best["batch_size"], best["num_classes"],
+                 best["bidirectional"], best["nb_lstm_layers"],
+                 best["nb_lstm_units"], best["dropout_prop"])
 # To cuda
 WikiLSTM.to(device)
 # Set up optimizer
-optimizer = optim.Adam(WikiLSTM.parameters(), lr= best.learning_rate)
+optimizer = optim.Adam(WikiLSTM.parameters(), lr= best["learning_rate"])
 # Criterion
-if best.use_class_weights:
+if best["use_class_weights"]:
     criterion = nn.CrossEntropyLoss(weight=cw)
 else:
     criterion = nn.CrossEntropyLoss()
 
 # Training routine
 WikiLSTM_out, history = train_lstmn(train[0], train[1], WikiLSTM, optimizer, criterion,
-                                epochs = best.epochs, val_split = 0.1, batch_size = best.batch_size,
+                                epochs = best["epochs"], val_split = 0.1, batch_size = best["batch_size"],
                                 device = device)
 
 #%% Evaluate the model on test data
