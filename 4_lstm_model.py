@@ -193,7 +193,7 @@ space = {
 from hyperopt.pyll.stochastic import sample
 parameters = sample(space)
 print(parameters)
-#po = LSTMN_search(parameters)
+po = LSTMN_search(parameters)
 
 #%% Run the optimizer
 
@@ -230,19 +230,27 @@ print("total time: " + str(t_spent))
 
 #%% Train LSTMN on best parameters and train data
 
-max_sent_length = 15
+max_sent_length = 8
 
 # Load data for the sentence length
 sent_length = max_sent_length
 
-with open("data/HAN/tokenizer_S{}.pickle".format(sent_length), "rb") as inFile:
+with open(args.data_files_map[sent_length]["tokenizer"], "rb") as inFile:
     tokenizer = pickle.load(inFile)
-with open("data/HAN/HAN_embeddings_S{}.pickle".format(sent_length), "rb") as inFile:
+with open(args.data_files_map[sent_length]["embedding"], "rb") as inFile:
     FTEMB = torch.tensor(pickle.load(inFile)).to(device)
-with open("data/HAN/data_S{}.pickle".format(sent_length), "rb") as inFile:
+with open(args.data_files_map[sent_length]["input_data"], "rb") as inFile:
     data = pickle.load(inFile)
 # Unpack
-docs_vectorized = data["docs_vectorized"]
+train_x, train_y = data["train_x"], data["train_y"]
+docs_vectorized_lstm = []
+doc_lstm = []
+for doc in train_x:
+    doc_lstm = []
+    for sent in doc:
+        doc_lstm = doc_lstm + sent
+    docs_vectorized_lstm.append(doc_lstm)
+train_x = docs_vectorized_lstm
 labels_vect = data["labels_vectorized"]
 idx_to_label = data["idx_to_label"]
 label_to_idx = data["labels_to_idx"]
@@ -251,20 +259,16 @@ label_to_idx = data["labels_to_idx"]
 
 best = { ###########################################################################################################
     "bidirectional" : True,
-    "dropout_prop" : 0.17665639259474208,
-    "learning_rate" : 0.02318120952027118,
-    "nb_lstm_units" : 64,
+    "dropout_prop" : 0.010131,
+    "learning_rate" : 0.020356,
+    "nb_lstm_units" : 32,
     "nb_lstm_layers" : 1,
     "use_class_weights" : True,
     "batch_size" : 128,
     "num_classes" : len(np.unique(labels_vect)),
-    "epochs" : 9
+    "epochs" : 10
 }
 
-# Split
-train, val = split_data(docs_vectorized_lstm, labels_vect, 6754, p=0.05)
-# Make dataset
-test = WikiDocData(val[0], val[1])
 # Set up the model
 WikiLSTM = LSTMN(FTEMB, best["batch_size"], best["num_classes"],
                  best["bidirectional"], best["nb_lstm_layers"],
@@ -280,9 +284,30 @@ else:
     criterion = nn.CrossEntropyLoss()
 
 # Training routine
-WikiLSTM_out, history = train_lstmn(train[0], train[1], WikiLSTM, optimizer, criterion,
+WikiLSTM_out, history = train_lstmn(train_x, train_y, WikiLSTM, optimizer, criterion,
                                 epochs = best["epochs"], val_split = 0.1, batch_size = best["batch_size"],
                                 device = device)
+
+#%% Save model
+
+torch.save(WikiLSTM_out.state_dict(), "models/LSTM.pt")
+
+#%% Get test data
+
+test_x, test_y = data["test_x"], data["test_y"]
+docs_vectorized_lstm = []
+doc_lstm = []
+for doc in test_x:
+    doc_lstm = []
+    for sent in doc:
+        doc_lstm = doc_lstm + sent
+    docs_vectorized_lstm.append(doc_lstm)
+test_x = docs_vectorized_lstm
+
+#%% WikiDocData
+
+test = WikiDocData(test_x, test_y)
+train = WikiDocData(train_x, train_y)
 
 #%% Evaluate the model on test data
 
@@ -295,7 +320,83 @@ seqs, lens = process_batch(valbatch, device = device)
 # Predict
 with torch.no_grad():
     WikiLSTM_out.eval()
-    probs = WikiLSTM_out(seqs, lens)
+    probs = WikiLSTM_out(seqs, lens, batch_size = 1001)
+
+#%% Same for train data
+
+def predict_LSTM(model, dataset, batch_size = 128, device = "cpu"):
+    """
+    Create predictions for a HAN
+
+    :param model: LSTM model
+    :param dataset: WikiDocData dataset
+    :param batch_size: size of the input batches to the model
+    :param device: device on which the model is run
+    :return: tuple containing predictions and ground truth labels
+    """
+    n = len(dataset.X)
+    total = n // batch_size
+    remainder = n % batch_size
+    # Make indices
+    idx = []
+    start_idx = 0
+    for batch_idx in range(1, total+1):
+        idx.append((start_idx, batch_idx * batch_size))
+        start_idx += batch_size
+    # If remainder
+    if remainder > 0:
+        idx.append((start_idx, start_idx + remainder))
+    # For each pair, predict
+    predictions = []
+    ground_truth = []
+    for start_idx, stop_idx in idx:
+        # Get batch
+        inbatch = [dataset.__getitem__(idx) for idx in range(start_idx, stop_idx)]
+        # Process batch
+        seqs, lens = process_batch(inbatch, device = device)
+        # Batch size
+        bs = len(seqs)
+        # Predict
+        with torch.no_grad():
+            model.eval()
+            probs = model(seqs, lens, batch_size = bs)
+        # To classes
+        out = torch.argmax(probs, dim=1).cpu().numpy()
+        # Get true label
+        ytrue = [batch[1] for batch in inbatch]
+        ytrue = torch.tensor(ytrue).cpu().numpy()
+        # Cat together
+        predictions.append(out)
+        ground_truth.append(ytrue)
+    # Stack predictions & ground truth
+    return(np.hstack(predictions), np.hstack(ground_truth))
+
+#%% On Train
+
+# Predict train
+yhat, ytrue = predict_LSTM(WikiLSTM_out, train, device = device)
+# Print classification report
+print(metrics.classification_report(ytrue, yhat, target_names = list(label_to_idx.keys())))
+
+#%% On test
+
+# Predict test
+yhat, ytrue = predict_LSTM(WikiLSTM_out, test, device = device)
+# Print classification report
+print(metrics.classification_report(ytrue, yhat, target_names = list(label_to_idx.keys())))
+
+#%% Save to csv
+
+import pandas as pd
+out_preds = pd.DataFrame({"yhat": yhat, "ytrue":ytrue})
+out_preds.to_csv("predictions/LSTM.csv", index=False)
+
+#%%
+
+# Predict
+with torch.no_grad():
+    WikiLSTM_out.eval()
+    probs = WikiLSTM_out(seqs, lens, batch_size = len(batche[0].X))
 
 # %% Classes
 
@@ -312,7 +413,7 @@ print(sum(out == ytrue)/len(out))
 #%% Print classification report
 
 # Print classification report
-print(metrics.classification_report(ytrue, out, target_names = list(label_to_idx.keys())))
+print(metrics.classification_report(ytrue, yhat, target_names = list(label_to_idx.keys())))
 
 #%% Save model
 

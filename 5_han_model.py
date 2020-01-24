@@ -285,6 +285,7 @@ print(metrics.classification_report(ytruth, yhat, target_names = list(label_to_i
 
 import pandas as pd
 # Save
+out_preds = pd.DataFrame({"yhat": yhat, "ytrue":ytruth})
 out_preds.to_csv("predictions/HAN.csv", index=False)
 
 #%% Save probabilities

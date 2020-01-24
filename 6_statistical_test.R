@@ -4,6 +4,7 @@
 baseline_results <- read.csv("predictions/baseline.csv")
 HAN_results <- read.csv("predictions/HAN.csv")
 CNN_results <- read.csv("predictions/CNN_results.csv")
+LSTM_results <- read.csv("predictions/LSTM.csv")
 
 # Function to make confusion matrix
 MakeConfusionMatrix <- function(ypred, ytrue, num_classes, add_one = TRUE) {
@@ -23,13 +24,19 @@ MakeConfusionMatrix <- function(ypred, ytrue, num_classes, add_one = TRUE) {
 # Confusion matrices
 (BL_vCNN <- MakeConfusionMatrix(baseline_results$yhat, CNN_results$ypred, 11))
 (BL_vHAN <- MakeConfusionMatrix(baseline_results$yhat, HAN_results$yhat, 11))
+(BL_vLSTM <- MakeConfusionMatrix(baseline_results$yhat, LSTM_results$yhat, 11))
 (CNN_vHAN <- MakeConfusionMatrix(CNN_results$ypred, HAN_results$yhat, 11))
+(CNN_vLSTM <- MakeConfusionMatrix(CNN_results$ypred, LSTM_results$yhat, 11))
+(LSTM_vHAN <- MakeConfusionMatrix(LSTM_results$yhat, HAN_results$yhat, 11))
 
 # Do statistical test
 library(DescTools)
 DescTools::StuartMaxwellTest(BL_vCNN)
 DescTools::StuartMaxwellTest(BL_vHAN)
+DescTools::StuartMaxwellTest(BL_vLSTM)
 DescTools::StuartMaxwellTest(CNN_vHAN)
+DescTools::StuartMaxwellTest(CNN_vLSTM)
+DescTools::StuartMaxwellTest(LSTM_vHAN)
 
 library(reticulate)
 skl <- import("sklearn.metrics")

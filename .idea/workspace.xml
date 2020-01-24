@@ -2,164 +2,32 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="aa9f6f31-d7bf-494e-8d78-060984a7cdc0" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/PatternRecognition.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/PatternRecognition.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/3_cnn_model.R" beforeDir="false" afterPath="$PROJECT_DIR$/3_cnn_model.R" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/4_lstm_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/4_lstm_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LSTM.py" beforeDir="false" afterPath="$PROJECT_DIR$/LSTM.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluate_HAN_results.R" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate_HAN_results.R" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/5_han_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/5_han_model.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/results/LSTM_trials.csv" beforeDir="false" afterPath="$PROJECT_DIR$/results/LSTM_trials.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/results/basicNN_trials.csv" beforeDir="false" />
     </list>
-    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="FileEditorManager">
-    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/2_baseline_model.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1632">
-              <caret line="96" column="39" selection-start-line="96" selection-start-column="39" selection-end-line="96" selection-end-column="51" />
-              <folding>
-                <element signature="e#19#31#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/4_lstm_model.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="3842">
-              <caret line="226" selection-start-line="226" selection-end-line="226" />
-              <folding>
-                <element signature="e#139#223#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/LSTM.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="4063">
-              <caret line="250" selection-start-line="250" selection-end-line="250" />
-              <folding>
-                <element signature="e#324#336#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/5_han_model.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="4573">
-              <caret line="273" selection-start-line="273" selection-end-line="275" selection-end-column="53" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/HAN.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="8024">
-              <caret line="482" column="63" selection-start-line="482" selection-start-column="63" selection-end-line="482" selection-end-column="79" />
-              <folding>
-                <element signature="e#548#560#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/1_preprocess_raw_data.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="5100">
-              <caret line="311" column="42" selection-start-line="311" selection-start-column="42" selection-end-line="311" selection-end-column="42" />
-              <folding>
-                <element signature="e#61#74#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/model_utils.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="2533">
-              <caret line="160" column="18" selection-start-line="160" selection-start-column="18" selection-end-line="160" selection-end-column="18" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-    </leaf>
-  </component>
-  <component name="FindInProjectRecents">
-    <findStrings>
-      <find>long</find>
-      <find>ValueError: Classification metrics can't handle a mix of multiclass and continuous-multioutput targets</find>
-      <find>embedding</find>
-      <find>torch.tensor</find>
-      <find>FTEMB</find>
-    </findStrings>
-  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="IdeDocumentHistory">
-    <option name="CHANGED_PATHS">
-      <list>
-        <option value="$PROJECT_DIR$/.gitignore" />
-        <option value="$PROJECT_DIR$/1_preprocess_raw_data.py" />
-        <option value="$PROJECT_DIR$/HAN.py" />
-        <option value="$PROJECT_DIR$/5_han_model.py" />
-        <option value="$PROJECT_DIR$/2_baseline_model.py" />
-        <option value="$PROJECT_DIR$/LSTM.py" />
-        <option value="$PROJECT_DIR$/4_lstm_model.py" />
-      </list>
-    </option>
-  </component>
-  <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-9" />
-    <option name="width" value="1296" />
-    <option name="height" value="1047" />
-  </component>
-  <component name="ProjectView">
-    <navigator proportions="" version="1">
-      <foldersAlwaysOnTop value="true" />
-    </navigator>
-    <panes>
-      <pane id="Scope" />
-      <pane id="ProjectPane">
-        <subPane>
-          <expand>
-            <path>
-              <item name="PatternRecognition" type="b2602c69:ProjectViewProjectNode" />
-              <item name="PatternRecognition" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="PatternRecognition" type="b2602c69:ProjectViewProjectNode" />
-              <item name="PatternRecognition" type="462c0819:PsiDirectoryNode" />
-              <item name="models" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="PatternRecognition" type="b2602c69:ProjectViewProjectNode" />
-              <item name="PatternRecognition" type="462c0819:PsiDirectoryNode" />
-              <item name="results" type="462c0819:PsiDirectoryNode" />
-            </path>
-          </expand>
-          <select />
-        </subPane>
-      </pane>
-    </panes>
+  <component name="ProjectId" id="1Wo6KW7BGGXCxRInryJIg6XYMSV" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showExcludedFiles" value="true" />
+    <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">
     <property name="ASKED_SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.detected.package.tslint" value="true" />
     <property name="node.js.path.for.package.eslint" value="project" />
@@ -169,18 +37,6 @@
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
-  </component>
-  <component name="RunDashboard">
-    <option name="ruleStates">
-      <list>
-        <RuleState>
-          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
-        </RuleState>
-        <RuleState>
-          <option name="name" value="StatusDashboardGroupingRule" />
-        </RuleState>
-      </list>
-    </option>
   </component>
   <component name="RunManager">
     <configuration default="true" type="PythonConfigurationType" factoryName="Python">
@@ -229,156 +85,31 @@
       <workItem from="1579713916497" duration="2292000" />
       <workItem from="1579718620794" duration="2321000" />
       <workItem from="1579773737831" duration="153000" />
+      <workItem from="1579803541398" duration="5379000" />
+      <workItem from="1579847838886" duration="1019000" />
     </task>
     <servers />
-  </component>
-  <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="96779000" />
-  </component>
-  <component name="ToolWindowManager">
-    <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
-    <editor active="true" />
-    <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.16684435" />
-      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
-      <window_info id="Favorites" order="2" side_tool="true" />
-      <window_info anchor="bottom" id="Message" order="0" />
-      <window_info anchor="bottom" id="Find" order="1" weight="0.32659933" />
-      <window_info anchor="bottom" id="Run" order="2" />
-      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
-      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
-      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
-      <window_info anchor="bottom" id="TODO" order="6" />
-      <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
-      <window_info anchor="bottom" id="Version Control" order="8" />
-      <window_info anchor="bottom" id="Database Changes" order="9" />
-      <window_info anchor="bottom" id="Event Log" order="10" side_tool="true" />
-      <window_info anchor="bottom" id="Terminal" order="11" weight="0.09426987" />
-      <window_info active="true" anchor="bottom" id="Python Console" order="12" visible="true" weight="0.3911111" />
-      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
-      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
-      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
-      <window_info anchor="right" id="SciView" order="3" sideWeight="0.5328467" visible="true" weight="0.110341154" />
-      <window_info anchor="right" id="R Graphics" order="4" />
-      <window_info anchor="right" id="R Packages" order="5" />
-      <window_info anchor="right" x="0" y="0" width="594" height="856" id="Documentation" order="6" sideWeight="0.46715328" side_tool="true" visible="true" weight="0.110341154" />
-      <window_info anchor="right" id="Database" order="7" />
-    </layout>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
   </component>
-  <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/3_cnn_model.py" />
-    <entry file="file://$PROJECT_DIR$/results/convNN_trials.csv" />
-    <entry file="file://$PROJECT_DIR$/.gitignore">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="390">
-          <caret line="41" column="9" selection-start-line="41" selection-start-column="9" selection-end-line="41" selection-end-column="9" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/4_LSTM.py" />
-    <entry file="file://$PROJECT_DIR$/data/convert_pickel_to_csv.R" />
-    <entry file="file://$PROJECT_DIR$/results/basicNN_trials.csv">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1553" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/models/HAN.pt">
-      <provider selected="true" editor-type-id="LargeFileEditor">
-        <state relative-caret-position="-147953" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/results/baselineNN_trials.csv">
-      <provider editor-type-id="csv-table-editor">
-        <state showInfoPanel="true" fixedHeaders="false" rowLines="3" />
-      </provider>
-      <provider editor-type-id="text-editor" />
-      <provider selected="true" editor-type-id="csv-text-editor">
-        <state relative-caret-position="-8055">
-          <caret selection-end-column="1" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/results/HAN_trials.csv">
-      <provider editor-type-id="csv-table-editor">
-        <state showInfoPanel="true" fixedHeaders="false" rowLines="3" />
-      </provider>
-      <provider selected="true" editor-type-id="csv-text-editor">
-        <state relative-caret-position="-6200" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/results/LSTM_trials.csv">
-      <provider editor-type-id="csv-table-editor">
-        <state showInfoPanel="true" fixedHeaders="false" rowLines="3" />
-      </provider>
-      <provider selected="true" editor-type-id="csv-text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/LSTM.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="4063">
-          <caret line="250" selection-start-line="250" selection-end-line="250" />
-          <folding>
-            <element signature="e#324#336#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/5_han_model.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="4573">
-          <caret line="273" selection-start-line="273" selection-end-line="275" selection-end-column="53" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/HAN.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="8024">
-          <caret line="482" column="63" selection-start-line="482" selection-start-column="63" selection-end-line="482" selection-end-column="79" />
-          <folding>
-            <element signature="e#548#560#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/1_preprocess_raw_data.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="5100">
-          <caret line="311" column="42" selection-start-line="311" selection-start-column="42" selection-end-line="311" selection-end-column="42" />
-          <folding>
-            <element signature="e#61#74#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/model_utils.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2533">
-          <caret line="160" column="18" selection-start-line="160" selection-start-column="18" selection-end-line="160" selection-end-column="18" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/4_lstm_model.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3842">
-          <caret line="226" selection-start-line="226" selection-end-line="226" />
-          <folding>
-            <element signature="e#139#223#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/2_baseline_model.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1632">
-          <caret line="96" column="39" selection-start-line="96" selection-start-column="39" selection-end-line="96" selection-end-column="51" />
-          <folding>
-            <element signature="e#19#31#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
+  <component name="WindowStateProjectService">
+    <state x="1010" y="271" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog" timestamp="1579803949737">
+      <screen x="0" y="0" width="2560" height="1040" />
+    </state>
+    <state x="1010" y="271" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog/0.0.2560.1040@0.0.2560.1040" timestamp="1579803949737" />
+    <state x="1079" y="360" key="FileChooserDialogImpl" timestamp="1579803618304">
+      <screen x="0" y="0" width="2560" height="1040" />
+    </state>
+    <state x="1079" y="360" key="FileChooserDialogImpl/0.0.2560.1040@0.0.2560.1040" timestamp="1579803618304" />
+    <state x="783" y="166" key="SettingsEditor" timestamp="1579803624563">
+      <screen x="0" y="0" width="2560" height="1040" />
+    </state>
+    <state x="783" y="166" key="SettingsEditor/0.0.2560.1040@0.0.2560.1040" timestamp="1579803624563" />
+    <state x="988" y="349" key="com.intellij.ide.util.TipDialog" timestamp="1579847873331">
+      <screen x="0" y="0" width="2560" height="1040" />
+    </state>
+    <state x="988" y="349" key="com.intellij.ide.util.TipDialog/0.0.2560.1040@0.0.2560.1040" timestamp="1579847873331" />
   </component>
   <component name="masterDetails">
     <states>
