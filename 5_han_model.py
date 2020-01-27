@@ -281,6 +281,11 @@ yhat, yprob, ytruth = predict_HAN(model=WikiHAN_out, dataset=test, batch_size=12
 # Print classification report
 print(metrics.classification_report(ytruth, yhat, target_names = list(label_to_idx.keys())))
 
+#%% Confusion matrix
+
+print(metrics.confusion_matrix(ytruth, yhat))
+
+
 #%% Save predictions
 
 import pandas as pd
