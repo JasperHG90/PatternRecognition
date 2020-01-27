@@ -6,7 +6,7 @@ The vital articles list was downloaded using scrapy. The code can be found in th
 
 Given the different skillsets in our group, we use a mix of R, python, Keras and Pytorch to build our models. However, we make sure that each model uses the same train/test splits.
 
-Our presentation can be found here. Our final paper can be found here.
+Our presentation can be found [here](https://docs.google.com/presentation/d/1vq3RhQ5JyFNAMXWLMUQcN6e6ITu1f9eavhIgz0xHEqc/edit?usp=sharing). Our final paper can be found [here](writeup/team22_pattern_recognition.pdf).
 
 ## Group members
 
