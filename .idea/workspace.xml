@@ -1,14 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="aa9f6f31-d7bf-494e-8d78-060984a7cdc0" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/PatternRecognition.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/PatternRecognition.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/4_lstm_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/4_lstm_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/5_han_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/5_han_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/results/LSTM_trials.csv" beforeDir="false" afterPath="$PROJECT_DIR$/results/LSTM_trials.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/results/basicNN_trials.csv" beforeDir="false" />
-    </list>
+    <list default="true" id="aa9f6f31-d7bf-494e-8d78-060984a7cdc0" name="Default Changelist" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -86,7 +79,7 @@
       <workItem from="1579718620794" duration="2321000" />
       <workItem from="1579773737831" duration="153000" />
       <workItem from="1579803541398" duration="5379000" />
-      <workItem from="1579847838886" duration="1019000" />
+      <workItem from="1579847838886" duration="1621000" />
     </task>
     <servers />
   </component>
