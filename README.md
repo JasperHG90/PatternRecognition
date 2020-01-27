@@ -49,7 +49,7 @@ To run our code, we recommend using [PyCharm](https://www.jetbrains.com/pycharm/
 ## Setup
 
 1. Download and install [Anaconda Python 3](https://www.anaconda.com/distribution/)
-2. Download latest version of [Rstudio](https://rstudio.com/products/rstudio/download/). Need this to run python scripts in Rstudio.
+2. Download latest version of [Rstudio](https://rstudio.com/products/rstudio/download/). 
 3. If you want to re-run our data pre-processing steps, download the FastText word embeddings from [here](https://fasttext.cc/docs/en/english-vectors.html). You need the `wiki-news-300d-1M.vec.zip` file. Save the file in the `embeddings` folder and unzip it there. If you do not want to rerun the data preprocessing steps, then you don't need the FT embeddings to re-run our models; they are included in the preprocessed data files. 
 4. In a terminal, go to this repository's folder and set up the Conda environment. If you are on Windows, execute:
 
