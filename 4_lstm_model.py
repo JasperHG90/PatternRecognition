@@ -266,7 +266,7 @@ best = { #######################################################################
     "use_class_weights" : True,
     "batch_size" : 128,
     "num_classes" : len(np.unique(labels_vect)),
-    "epochs" : 10
+    "epochs" : 9
 }
 
 # Set up the model
@@ -290,7 +290,6 @@ WikiLSTM_out, history = train_lstmn(train_x, train_y, WikiLSTM, optimizer, crite
 
 #%% Save model
 
-torch.save(WikiLSTM_out.state_dict(), "models/LSTM.pt")
 
 #%% Get test data
 
