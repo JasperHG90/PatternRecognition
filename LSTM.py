@@ -308,7 +308,7 @@ class LSTMN(nn.Module):
         output, (final_hidden_state, final_cell_state) = self.lstm(torch.squeeze(embedded), (h_0, c_0))
         
         # Apply activation + dropout
-        final_hidden_state = F.dropout(torch.tanh(final_hidden_state), p=self._dropout_prop)
+        final_hidden_state = F.dropout(final_hidden_state, p=self._dropout_prop)
         
         # Linear layer
         final_output = self.hidden_to_label(final_hidden_state[-1]) # final_hidden_state.size() = (1, batch_size, hidden_size) & final_output.size() = (batch_size, output_size)
