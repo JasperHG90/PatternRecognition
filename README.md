@@ -34,6 +34,10 @@ It contains the following folders:
 6. `predictions`: CSV files containing the predictions and ground-truth labels for each model.
 7. `results`: CSV files containing the results of the hyperparameter search we conducted using [Hyperopt](https://github.com/hyperopt/hyperopt).
 
+To run our code, we recommend using PyCharm or VS Code. The latter can be downloaded in the Anaconda Launcher.
+
+![anaconda-vscode](img/AL.png)
+
 ## Setup
 
 1. Download and install [Anaconda Python 3](https://www.anaconda.com/distribution/)
