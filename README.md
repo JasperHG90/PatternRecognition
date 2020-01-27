@@ -76,6 +76,30 @@ install.packages(c("yardstick", "rBayesianOptimization", "DescTools", "ggExtra")
 - "~/Anaconda3/envs/VitalWikiClassifier/lib/R/library" 
 - "~/anaconda3/envs/VitalWikiClassifier/lib/R/library" 
 
+## Hyperparameter optimization
+
+We use the `hyperopt` python module to search for good hyperparameters using the following settings.
+
+![hyperparameters](img/hyperparams.png)
+
+You can use the `evaluate_baseline_results.R` and `evaluate_HAN_results.R` R scripts to evaluate the results of the hyperparameter optimization process. It provides plots like this:
+
+![settings](img/hyperopt_iters_han.png)
+
+Over time, your results should improve as the algorithm begins to understand which settings work well:
+
+![hyperopt_results](img/hyperopt_trainiters_results.png)
+
+## Results
+
+We obtain the following results using our models:
+
+![results](img/PRresults.png)
+
+The results of a Stuart-Maxwell test show all models perform better than the baseline model. It's not as clear to tell which of the other models perform best.
+
+![results](PR_SM.png)
+
 ## Shiny application
 
 We created a small shiny application that allows you to input a document and visualize the HAN attention predictions and score. The shiny application can be found in the `shiny` folder.
