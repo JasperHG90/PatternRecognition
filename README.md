@@ -98,7 +98,7 @@ We obtain the following results using our models:
 
 The results of a Stuart-Maxwell test show all models perform better than the baseline model. It's not as clear to tell which of the other models perform best.
 
-![results](PR_SM.png)
+![statest](img/PR_SM.png)
 
 ## Shiny application
 
