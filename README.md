@@ -8,6 +8,14 @@ Given the different skillsets in our group, we use a mix of R, python, Keras and
 
 Our presentation can be found here. Our final paper can be found here.
 
+## Group members
+
+- [Ahmed Assaf](https://github.com/Ahmedalassafy)
+- [Luis Martín-Roldán](https://github.com/Feilem)
+- [Qixiang Fang](https://github.com/fqixiang)
+- [Jasper Ginn](https://github.com/JasperHG90)
+- [Mo Wang](https://github.com/Vincentace)
+
 ## Files
 
 Currently contains the following files (only the most important files are listed here):
