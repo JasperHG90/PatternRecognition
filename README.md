@@ -38,7 +38,8 @@ It contains the following folders:
 
 1. Download and install [Anaconda Python 3](https://www.anaconda.com/distribution/)
 2. Download latest version of [Rstudio](https://rstudio.com/products/rstudio/download/). Need this to run python scripts in Rstudio.
-3. In a terminal, go to this repository's folder and set up the Conda environment
+3. If you want to re-run our data pre-processing steps, download the FastText word embeddings from [here](https://fasttext.cc/docs/en/english-vectors.html). You need the `wiki-news-300d-1M.vec.zip` file. Save the file in the `embeddings` folder and unzip it there. If you do not want to rerun the data preprocessing steps, then you don't need the FT embeddings to re-run our models; they are included in the preprocessed data files. 
+4. In a terminal, go to this repository's folder and set up the Conda environment
 
 ```shell
 conda env create -f environment.yml
@@ -46,13 +47,13 @@ conda env create -f environment.yml
 
 Note that this will install both Python requirements as well as R requirements. We use a separate R library location that is set in the `.Renviron` file.
 
-4. In R, install the following libraries:
+5. In R, install the following libraries:
 
 ```r
 install.packages(c("yardstick", "rBayesianOptimization", "DescTools", "ggExtra"))
 ```
 
-5. Check the `.Rprofile` file to ensure that R knows where to find your anaconda distribution. Check the `.Renviron` file to ensure that the path to the Anaconda environment is set correctly.
+6. Check the `.Rprofile` file to ensure that R knows where to find your anaconda distribution. Check the `.Renviron` file to ensure that the path to the Anaconda environment is set correctly.
 
 ## Shiny application
 
