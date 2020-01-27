@@ -36,7 +36,7 @@ It contains the following folders:
 
 To run our code, we recommend using [PyCharm](https://www.jetbrains.com/pycharm/) or [VS Code](https://code.visualstudio.com/). The latter can be downloaded in the Anaconda Launcher.
 
-![anaconda-vscode](img/AL.png)
+![anaconda-vscode](img/AL.PNG)
 
 ## Setup
 
