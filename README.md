@@ -58,5 +58,5 @@ install.packages(c("yardstick", "rBayesianOptimization", "DescTools", "ggExtra")
 
 We created a small shiny application that allows you to input a document and visualize the HAN attention predictions and score. Find the repository to this shiny app [here](https://github.com/JasperHG90/shiny_han).
 
-
+![shiny-app](img/shiny.gif)
 
