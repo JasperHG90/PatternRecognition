@@ -290,6 +290,7 @@ WikiLSTM_out, history = train_lstmn(train_x, train_y, WikiLSTM, optimizer, crite
 
 #%% Save model
 
+torch.save(WikiLSTM_out.state_dict(), "models/LSTM.pt")
 
 #%% Get test data
 
