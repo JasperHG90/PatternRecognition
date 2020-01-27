@@ -10,7 +10,7 @@ Our presentation can be found here. Our final paper can be found here.
 
 ## Files
 
-Currently contains the following files (not all files are listed here):
+Currently contains the following files (only the most important files are listed here):
 
 1. `data/raw/WikiEssentials_L4.7z`: output file of the WikiVitalArticles program. Each document is included in its entirety (but split by paragraph).  
 2. `preprocess_utils.py`: preprocessing functions for Wiki data.
