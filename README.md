@@ -71,7 +71,10 @@ Note that this will install both Python requirements as well as R requirements. 
 install.packages(c("yardstick", "rBayesianOptimization", "DescTools", "ggExtra"))
 ```
 
-6. Check the `.Rprofile` file to ensure that R knows where to find your anaconda distribution. Check the `.Renviron` file to ensure that the path to the Anaconda environment is set correctly.
+6. Check the `.Renviron` file to ensure that the path to the Anaconda environment is set correctly. The path should look something like "PATH-TO-ANACONDA-INSTALL/envs/VitalWikiClassifier/lib/R/library". Usually, it is located in either one of the following places:
+
+- "~/Anaconda3/envs/VitalWikiClassifier/lib/R/library" 
+- "~/anaconda3/envs/VitalWikiClassifier/lib/R/library" 
 
 ## Shiny application
 
